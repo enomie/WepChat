@@ -2,7 +2,7 @@
 
 Spezifikation für **eindeutige Anzeigenamen pro Chat-Raum** (normalisierte URL). Der Nutzer tippt einen **Wunschnamen**; der Server vergibt den **Raum-Anzeigenamen** (`user_session.username`) und schreibt denselben Wert in `chat_message.sender_name` beim Senden.
 
-Verwandt: [message-content.md](message-content.md) (Zeichen, Länge 13), [nickname-appearance.md](nickname-appearance.md) (Farbe unabhängig vom Namen), [delete-messages.md](delete-messages.md) (eigene Nachrichten über `sender_identity`, nicht über den Namen), [security-list.md §2](security-list.md#2-server-weitere-härtung-backlog), [security.md](security.md).
+Verwandt: [message-content.md](message-content.md) (Zeichen, Länge 13), [nickname-appearance.md](nickname-appearance.md) (Farbe unabhängig vom Namen), [delete-messages.md](delete-messages.md), [security-list.md §2](security-list.md#2-server-weitere-härtung-backlog), [security.md](security.md).
 
 **Status:** Implementiert. Server: [`server/src/lib.rs`](../../server/src/lib.rs) (`assign_room_display_name`, `join_room`, `send_message`), Tests `room_pseudonym_tests`. Extension: [`spacetime.svelte.ts`](../../extension/src/lib/spacetime.svelte.ts), [`App.svelte`](../../extension/src/App.svelte).
 
@@ -90,7 +90,7 @@ Damit ist Impersonation („als Kurt senden, obwohl Session Kurt2“) nicht mög
 | **`join_room`** | Sendet Wunschname + `nick_color` bei URL-Wechsel, Profil- oder Farbänderung (wie heute). |
 | **Raum-Anzeigename** | Aus **eigener** `user_session`-Zeile (Subscription), Feld `username`. |
 | **Chat-Liste** | Weiterhin `msg.senderName` (bereits disambiguiert). |
-| **„Eigene“ Blase / Löschen** | **`sender_identity`**, nicht Namensvergleich ([delete-messages.md](delete-messages.md)). |
+| **„Eigene“ Blase / Löschen** | UI: `messageIsMine`; Server: nur `sender_identity` ([delete-messages.md](delete-messages.md)). |
 | **UI-Hinweis** | Wenn `user_session.username` ≠ Wunschname (case-sensitive Anzeige ok): dezenter Text z. B. „In this room you appear as: Kurt2“ (i18n, Settings oder Raum-Kopf). Kein Modal. |
 | **`send_message`** | Kann Wunschnamen mitschicken; Server nutzt nur Session. |
 

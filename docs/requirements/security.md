@@ -114,7 +114,7 @@ Reducer (u. a.): `join_room`, `leave_room`, `send_message`, `identity_disconnect
 - Es gibt **keine** serverseitige Bindung „`sender_name` muss zur Identity passen“, der Client übergibt `username` als String; Missbrauch (falsche Anzeigenamen) ist möglich.
 - Es gibt **keine** Rate-Limits, Längenlimits oder Inhaltsfilter im Backend (geplant: [ideas.md](../kickoff/ideas.md), [general.md](general.md)).
 
-Admin-Operationen (Retention löschen, Moderation, Bezahl-Features) müssen **eigene Reducer** mit expliziter Autorisierung sein, z. B. nur bestimmte `Identity`-Werte oder ein serverseitiges Flag, **nicht** ein Secret in der Extension.
+**Betreiber-Operationen** (Publish, Schema, ggf. spätere kostenpflichtige Features) laufen nur über **CLI/Account**, nicht über die Extension. **Keine personenbezogene Moderation** fremder Chat-Inhalte pro URL-Raum (Skalierung, **72 h-Retention**, siehe [security-list.md §7](security-list.md#7-bewusst-nicht-ziel)).
 
 ---
 
@@ -173,9 +173,11 @@ Priorität aus Produktrisiko:
 2. **Rate-Limiting** pro `ctx.sender`, Spezifikation: **2 Nachrichten / 60 s**, UX mit Countdown: [security-list.md](security-list.md#1-nachrichten-rate-limit-2-pro-minute).
 3. **Retention 72 h**, Scheduled Delete pro Nachricht **und** wiederkehrender Cleanup (nur Server): [security-list.md](security-list.md#6-nachrichten-retention-72-stunden), Kurz [spacetimedb.md](../kickoff/spacetimedb.md).
 4. **Inhaltsregeln**, umgesetzt: [message-content.md](message-content.md) (`message-text-policy.ts` + `send_message` / `join_room`). Darin auch **kein Link-Regex**: Affiliate/Phishing-URLs im Text werden durch die Zeichen-Whitelist verhindert (`:` `/` u. a. verboten), [§8 Links & Domains](message-content.md#8-links-domains-kein-link-regex).
-5. **Localhost ausschließen**, Client + optional serverseitig ablehnen.
-6. **Moderation-Reducer**, nur für autorisierte Identities; keine Admin-Keys im Client.
+5. **Localhost ausschließen**, Client + Server ([url-eligibility.md](url-eligibility.md)).
+6. **Eigene Nachrichten löschen**, umgesetzt: [delete-messages.md](delete-messages.md).
 7. **Sensible Tabellen `private`** machen, falls später Nutzerdaten jenseits des öffentlichen Chats nötig sind.
+
+**Nicht geplant:** Moderation durch Personen oder Admin-Reducer zum Entfernen fremder Nachrichten (Skalierung + [72 h-Retention](security-list.md#6-nachrichten-retention-72-stunden), [security-list.md §7](security-list.md#7-bewusst-nicht-ziel)).
 
 ---
 
@@ -202,7 +204,7 @@ Priorität aus Produktrisiko:
 
 - [ ] SpacetimeDB-Account-Passwort / CLI-Session für Publish
 - [ ] „Master-API-Key“, der Löschen/Publish erlaubt
-- [ ] Geheime Moderator-Passwörter (stattdessen serverseitige Identity-Liste oder separates Backend)
+- [ ] Keine „Moderator“-Logik im Client (personenbezogene Moderation ist kein Produktziel)
 
 ---
 
@@ -226,3 +228,6 @@ Nein, nur Anzeige. Vertrauenswürdig ist **`sender_identity`** (`ctx.sender`), d
 
 **„Kann Nutzer eigene Nachrichten löschen?“**  
 Ja, Papierkorb links neben der eigenen Blase (ein Klick). Server: nur `delete_own_message` bei passender `sender_identity`. Details: [delete-messages.md](delete-messages.md).
+
+**„Gibt es Moderatoren?“**  
+Nein. Pro Webseiten-URL ein offener Raum, zu viele URLs für menschliche Moderation; Inhalte verschwinden ohnehin nach **72 h** automatisch vom Server. Schutz über technische Regeln, Retention, eigenes Löschen und Safety-Hinweise in der Extension ([security-list.md §7](security-list.md#7-bewusst-nicht-ziel)).

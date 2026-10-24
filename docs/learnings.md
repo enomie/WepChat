@@ -214,7 +214,7 @@ Server-Logik in `server/src/lib.rs` (2 Nachrichten / 60 s, 72 h Retention vi
 - SpacetimeDB-**Identity** in der Extension hängt am **lokalen Token** (Browser-Storage / Profil). Jede neue Identity startet mit leerer Historie.
 - **Server-Limits pro `ctx.sender`** (z. B. „100 Nachrichten / 72 h pro Raum“) sind per Script umgehbar: Storage leeren, Profil wechseln, erneut verbinden, Zähler **0**.
 - **Folge:** Idee [ideas.md §6](../kickoff/ideas.md) (100/72h pro URL + Identity) wurde **nicht** umgesetzt; dokumentiert als verworfen in [security-list.md §7](requirements/security-list.md#7-bewusst-nicht-ziel).
-- **Was bleibt:** kurzes [2/Min-Rate-Limit](requirements/security-list.md#1-nachrichten-rate-limit-2-pro-minute), [Zeichenfilter](requirements/message-content.md), [Retention 72 h](requirements/security-list.md#6-nachrichten-retention-72-stunden) (Datenhygiene). Gegen professionellen Spam später andere Hebel (Moderation, Captcha, kostenpflichtige Identities, Infrastruktur-Heuristik), siehe Roadmap in [security.md](requirements/security.md).
+- **Was bleibt:** kurzes [2/Min-Rate-Limit](requirements/security-list.md#1-nachrichten-rate-limit-2-pro-minute), [Zeichenfilter](requirements/message-content.md), [Retention 72 h](requirements/security-list.md#6-nachrichten-retention-72-stunden) (Datenhygiene). Gegen professionellen Spam später nur **automatische** Hebel (Captcha, Infrastruktur-Heuristik, ggf. kostenpflichtige Identities), **keine** Moderation durch Personen pro URL (auch wegen automatischer Löschung nach 72 h, [security-list.md §7](requirements/security-list.md#7-bewusst-nicht-ziel)).
 
 ---
 

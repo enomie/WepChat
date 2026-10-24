@@ -1,13 +1,8 @@
 # Eigene Nachrichten löschen
 
-Nutzer können **eigene** Chat-Nachrichten manuell entfernen. Fremde Nachrichten sind nicht löschbar. Autorisierung läuft **serverseitig über SpacetimeDB-`Identity`** (`sender_identity` / `ctx.sender`), **nicht** über den Anzeigenamen.
+Nutzer können **eigene** Chat-Nachrichten manuell entfernen. Fremde Nachrichten sind nicht löschbar. Autorisierung läuft **serverseitig über SpacetimeDB-`Identity`** (`sender_identity` / `ctx.sender`), nicht über den Anzeigenamen.
 
-Verwandte Docs:
-
-- [security.md](security.md), `sender_name` ist nur Anzeige; vertrauenswürdig ist `sender_identity`
-- [security-list.md](security-list.md), Rate-Limit, Retention 72 h (Scheduler-`delete_message`)
-- [message-content.md](message-content.md), erlaubte Zeichen in `text` / Pseudonym (bereits live)
-- [general.md](general.md), Pseudonym lokal, Identity serverseitig
+Verwandte Docs: [security.md](security.md), [security-list.md](security-list.md), [general.md](general.md), [room-pseudonym.md](room-pseudonym.md).
 
 ---
 
@@ -15,146 +10,69 @@ Verwandte Docs:
 
 | Was | Verhalten |
 |-----|-----------|
-| **Löschen** | Nur Nachrichten, deren `sender_identity` der aktuellen Verbindung entspricht |
-| **Anzeige im Chat** | Weiterhin **`sender_name`** (Pseudonym), für alle sichtbar, inkl. historischer Namen pro Nachricht |
-| **„Eigene“ Blase / Papierkorb (UI)** | `messageIsMine` in `spacetime.svelte.ts`: primär **Identity**, zusätzlich Anzeigename im Raum (`roomDisplayName` / lokales Pseudonym) für Layout |
-| **Löschen (Server)** | Nur **`sender_identity == ctx.sender`**, Anzeigename wird ignoriert |
-| **Moderation** | Kein „fremde Nachricht löschen“ für normale User (später optional Admin-Reducer) |
+| **Löschen (Server)** | Nur wenn `msg.sender_identity == ctx.sender` (`delete_own_message`) |
+| **Anzeige im Chat** | Weiterhin **`sender_name`** pro Nachricht (historisch), nicht die Identity |
+| **Eigene Blase / Papierkorb (UI)** | `messageIsMine` in [`spacetime.svelte.ts`](../../extension/src/lib/spacetime.svelte.ts) |
+| **Moderation durch Personen** | **Nicht vorgesehen** (Skalierung pro URL; ohnehin [Retention 72 h](security-list.md#6-nachrichten-retention-72-stunden); nur eigenes Löschen, [security-list.md §7](security-list.md#7-bewusst-nicht-ziel)) |
 
-**Warum Identity statt Name?** Pseudonyme sind frei wählbar und können kollidieren (geplant: eindeutige Raum-Anzeigenamen, [room-pseudonym.md](room-pseudonym.md)). Ein User kann den Namen nach dem Senden ändern. Löschen und „meine Blase“ müssen an die **Verbindungs-Identity** gebunden sein.
-
-**Anzeige bleibt beim Namen:** In der Blase wird unverändert der zum Sendezeitpunkt gespeicherte `sender_name` gerendert. Papierkorb und `bubble own` nutzen `messageIsMine`; der Reducer prüft nur die Identity.
+**Identity vs. Anzeigename:** Pseudonyme können im Raum kollidieren ([room-pseudonym.md](room-pseudonym.md)); der Server vergibt eindeutige Raumnamen. Löschen ist **nur** an die Verbindungs-Identity gebunden. Die UI nutzt zusätzlich den Raum-Anzeigenamen, damit „eigene“ Blasen zuverlässig erkannt werden (siehe §3.1).
 
 ---
 
-## 2. Ist-Zustand
+## 2. Server
 
-- Tabelle `chat_message` enthält `sender_identity` und `sender_name` (`server/src/lib.rs`).
-- Reducer `delete_message`: nur Scheduler (Retention 72 h), `only_scheduler(ctx)`.
-- Reducer **`delete_own_message`**: User-Löschung nur bei `msg.sender_identity == ctx.sender` (live).
-- Extension: `deleteOwnMessage` → `conn.reducers.deleteOwnMessage({ messageId })`; `onDelete` aktualisiert die Liste.
-- UI: [`App.svelte`](../../extension/src/App.svelte), Zeile `message-row own` mit Papierkorb **links** neben der Blase ([`trash.svg`](../../extension/src/assets/icons/trash.svg)), Locale `messages.deleteAria`.
+**Reducer:** `delete_own_message(message_id: u64)` in [`server/src/lib.rs`](../../server/src/lib.rs)
 
----
+1. Zeile mit `id == message_id` laden; fehlt → noop.
+2. `msg.sender_identity != ctx.sender` → abbrechen (stilles Ignorieren).
+3. Sonst Zeile in `chat_message` löschen.
 
-## 3. Server (`delete_own_message`)
+**Retention:** Pro Nachricht existiert ein Scheduler-Job `delete_message` (72 h). Nach User-Löschung bleibt der Job bestehen (Option **A**); späterer Lauf ist noop. Optional Follow-up: Schedule-Zeile beim User-Delete entfernen (Option **B**).
 
-### 3.1 Signatur
-
-`delete_own_message(message_id: u64)` in [`server/src/lib.rs`](../../server/src/lib.rs)
-
-### 3.2 Regeln
-
-1. Zeile mit `id == message_id` laden.
-2. Keine Zeile → **noop** (idempotent, kein Fehler nötig).
-3. `msg.sender_identity != ctx.sender` → **abbrechen** (kein Delete, kein Leak ob die ID existiert, für MVP reicht stilles Ignorieren wie bei Rate-Limit).
-4. Sonst: `chat_message` Zeile löschen.
-
-### 3.3 Retention / Scheduler
-
-Beim Senden wird pro Nachricht ein geplanter Lauf `delete_message` (72 h) angelegt (`delete_message_schedule`).
-
-| Option | Empfehlung |
-|--------|------------|
-| **A, Minimal** | User-Löschung entfernt nur die Zeile; geplanter Job läuft später noop (bereits spezifiziert in [security-list.md §6](security-list.md)) |
-| **B, Sauber** | Beim User-Löschen zugehörigen Schedule-Eintrag mit `message_id` entfernen (weniger toter Scheduler-Noise) |
-
-Für MVP reicht **A**; **B** als Follow-up, wenn Schedule-Tabelle wächst.
-
-### 3.4 Sicherheit
-
-- **Niemals** `username` oder Client-gesendeten „Besitzer“ akzeptieren, nur `ctx.sender`.
-- Öffentliche Tabelle bleibt `public`; Schutz ist **Reducer-Logik**, nicht Tabellen-Privatsphäre.
+**Deploy:** `cargo test` → `spacetime publish wepchat -y` → bei Signatur-Änderung `npm run codegen:stdb` in `extension/`.
 
 ---
 
-## 4. Extension, UI & Verhalten
+## 3. Extension
 
-### 4.1 Eigene Nachricht erkennen (Client)
+### 3.1 `messageIsMine`
 
-`messageIsMine(msg, identityHex, roomDisplayName, localUsername)` in [`spacetime.svelte.ts`](../../extension/src/lib/spacetime.svelte.ts):
+`messageIsMine(msg, identityHex, roomDisplayName, localUsername)`:
 
-1. `senderIdentity` (Hex, case-insensitive) === `spacetimeChat.current.identity`, oder  
-2. `msg.senderName` === `roomDisplayName` (aus `user_session` für die eigene Identity), sonst Fallback lokales Pseudonym.
+1. `senderIdentity` (Hex, case-insensitive) === aktuelle Identity, oder  
+2. `msg.senderName` === `roomDisplayName` (eigene `user_session`) bzw. Fallback lokales Pseudonym.
 
-Schritt 2 betrifft **nur** Anzeige von `own` / Papierkorb. **Löschen** schlägt serverseitig fehl, wenn die Identity nicht passt (z. B. alte Nachrichten nach Identity-Wechsel: Trash ggf. sichtbar, Klick ohne Effekt, selten).
+Schritt 2 nur für **UI** (`bubble own`, Papierkorb). **Löschen** wirkt nur bei passender Identity (nach Identity-Wechsel kann der Papierkorb selten ohne Effekt sein).
 
-### 4.2 Chat-Anzeige (unverändert inhaltlich)
+### 3.2 UI
 
-Pro Nachricht weiter anzeigen:
+- [`App.svelte`](../../extension/src/App.svelte): `.message-row.own` mit Papierkorb **links** ([`trash.svg`](../../extension/src/assets/icons/trash.svg)), Blase rechts.
+- Button: transparent, Icon grau, Hover rot; ein Klick ohne Dialog.
+- `spacetimeChat.deleteOwnMessage(msg.id)`; Liste via `chat_message.onDelete`.
+- Locale: `messages.deleteAria` (de/en).
 
-- **Sender:** `msg.senderName` (historischer Name der Nachricht)
-- **Text:** `msg.text`
+### 3.3 Build
 
-Keine Anzeige der `sender_identity` im Chat (optional nur im Profil wie heute).
-
-### 4.3 Löschen-Interaktion (live)
-
-| Element | Verhalten |
-|---------|-----------|
-| **Layout** | `.message-row.own`: Papierkorb-Button links, Chatblase rechts, am unteren Chatrand ausgerichtet (`align-self: flex-end`) |
-| **Button** | Transparent, Icon grau (`currentColor`); **Hover:** Icon rot, kein Button-Hintergrund |
-| **Ausrichtung** | Papierkorb vertikal zur Blase zentriert (`align-items: center`) |
-| **Aktion** | Ein Klick, keine Bestätigung → `spacetimeChat.deleteOwnMessage(msg.id)` |
-| **A11y** | `aria-label` / `title` via `messages.deleteAria` (de/en) |
-
-Layout (eigene Nachricht):
-
-```
-  [Trash]  ┌─────────────────────┐
-           │ Anon…    Just now   │
-           │ Hallo Welt          │
-           └─────────────────────┘
-```
-
-Fremde Nachricht: nur `.bubble` ohne Zeile und ohne Papierkorb.
-
-### 4.4 Build & Test der Extension
-
-Lokales Laden aus `extension/.output/chrome-mv3`: nach Änderungen unter `extension/src/` **`npm run build`**, dann in `chrome://extensions` **Aktualisieren**. Siehe [publish-guide.md](../infos/publish-guide.md).
-
-### 4.5 Deploy (Reducer)
-
-Nach Änderung an `delete_own_message`: `cargo test` → `spacetime publish wepchat -y` → bei Bedarf `npm run codegen:stdb` in `extension/`.
+Entpackt aus `extension/.output/chrome-mv3`: nach Änderungen `npm run build`, Extension in Chrome aktualisieren ([publish-guide.md](../infos/publish-guide.md)).
 
 ---
 
-## 5. Release-Historie (Kurz)
-
-Feature live: Server-Reducer, Codegen, Extension-UI. Rate-Limit und Retention unverändert; User-Delete zusätzlich zum 72h-Scheduler (Option **A**, Schedule-Eintrag kann später noop).
-
----
-
-## 6. Randfälle & Copy
+## 4. Randfälle
 
 | Situation | Verhalten |
 |-----------|-----------|
-| **Pseudonym geändert** | Alte Nachrichten zeigen alten `sender_name`; weiterhin löschbar (gleiche Identity) |
-| **Gleicher Name wie anderer User** | Nur eigene Blasen mit Trash; Löschen fremder Nachrichten serverseitig unmöglich |
-| **Neue Identity** („ID neu generieren“, Storage gelöscht) | Alte Nachrichten noch im Raum sichtbar, **nicht** mehr löschbar, akzeptabel; optional Hinweis in Profil-Doc |
-| **Nachricht schon gelöscht** | Doppelklick / Retry: noop |
-| **Retention hat zuerst gelöscht** | UI entfernt Zeile bereits über `onDelete` |
-
-Optionaler UI-Hinweis (Tooltip Trash): *„Nur deine Nachrichten, unabhängig vom Anzeigenamen.“*
+| Pseudonym geändert | Alter `sender_name` in der Blase; löschbar bei gleicher Identity |
+| Gleicher Anzeigename im Raum | Server verhindert Kollision; Löschen nur mit eigener Identity |
+| Neue Identity / Storage weg | Alte Nachrichten sichtbar, nicht mehr löschbar |
+| Doppelklick / Retry | noop |
+| Retention zuerst | UI bereits über `onDelete` |
 
 ---
 
-## 7. Akzeptanzkriterien
+## 5. Manuelle Tests
 
-- [x] User kann eigene Nachricht löschen; verschwindet bei allen Clients im Raum (Subscription Delete).
-- [x] User kann **keine** fremde Nachricht löschen (manipulierte `message_id` am Server wirkungslos).
-- [x] Chat zeigt weiterhin **Namen** (`sender_name`), nicht die Identity.
-- [x] Blase `own` und Trash nur bei `messageIsMine` (Identity und/oder Raum-Anzeigename); Server löscht nur bei passender `sender_identity`.
-- [x] Fremde Nachrichten: kein Trash, keine `own`-Blase.
-- [x] Papierkorb per Tastatur bedienbar (`aria-label`, Fokus sichtbar).
-
----
-
-## 8. Testideen (manuell)
-
-1. Zwei Browser-Profile: A sendet, B sieht Nachricht, B hat keinen Trash; A schon.  
-2. A löscht → bei B verschwindet die Blase.  
-3. A ändert Pseudonym, löscht alte Nachricht → funktioniert; Name in der Blase bleibt der alte.  
-4. Gleicher `sender_name` bei A und B, nur jeweils eigene Nachrichten löschbar.  
-5. B ruft Reducer mit A’s `message_id` auf (DevTools) → keine Änderung.  
-6. Nach User-Delete: optional prüfen, dass geplanter 72h-Job noop (kein Fehler im Log).
+1. Zwei Profile: nur Sender sieht Papierkorb.  
+2. Löschen synchronisiert bei anderen Clients im Raum.  
+3. Pseudonym ändern, alte Nachricht löschen: Name in Blase unverändert.  
+4. Fremde `message_id` per Reducer: keine Wirkung.  
+5. Nach User-Delete: Scheduler-Lauf für diese ID noop (kein Fehler).

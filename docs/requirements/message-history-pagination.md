@@ -136,7 +136,7 @@ Implementierung (§4.2) in `spacetime.svelte.ts` / `message-history.svelte.ts`:
 
 ## 7. Sicherheit & SQL
 
-- **`url` escapen** in Subscriptions/SQL (wie Backlog [security-list §3](security-list.md#3-extension--verteidigung-in-der-tiefe-backlog)), `'` in URLs.
+- **`url` escapen** in Subscriptions/SQL: [`sql-literal-escape.ts`](../../extension/src/lib/sql-literal-escape.ts) (Sidepanel + Background), siehe [security-list.md §3](security-list.md#3-extension--verteidigung-in-der-tiefe-backlog).
 - Keine neuen Server-Reducer nötig für reine Lese-Pagination, sofern öffentliche `chat_message` + SQL ausreichen.
 
 ---

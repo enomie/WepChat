@@ -2,17 +2,11 @@
 
 Priorisierte Maßnahmen für `server/` und `extension/`. Übergreifendes Threat Model und Secrets: [security.md](security.md).
 
-**Stand Implementierung:** §1 Rate-Limit, §6 Retention und [Message Content](message-content.md) sind live. Gotchas: [learnings.md](../learnings.md) §2, §7, §9–§11. **Send-Pfad:** kein `chat_message`-Vollscan, [server-query-patterns.md](server-query-patterns.md).
+**Stand Implementierung:** §1 Rate-Limit, §6 Retention, [Message Content](message-content.md), [Eigene Nachrichten löschen](delete-messages.md) (`delete_own_message`), SQL-Escape (`sql-literal-escape.ts`), URL-Länge 2048. Gotchas: [learnings.md](../learnings.md) §2, §7, §9–§11. **Send-Pfad:** kein `chat_message`-Vollscan, [server-query-patterns.md](server-query-patterns.md).
 
-**Umsetzungsreihenfolge (aktuell):**
+**Offen (Priorität):**
 
-1. **[Nachrichten-Rate-Limit (2 / Minute)](#1-nachrichten-rate-limit-2-pro-minute)**, Server + UX mit Countdown  
-2. Server: Längenlimits, URL-Schema, Localhost, `sender_name` aus `user_session`  
-3. Extension: SQL-Escape in Subscriptions, Localhost in `cleanUrl`  
-4. ~~**[Nachrichten-Inhalt (erlaubte Zeichen)](message-content.md)**~~, erledigt  
-5. **[Nachrichten-Retention 72 h](#6-nachrichten-retention-72-stunden)**, Scheduled Delete **+** Cleanup-Job (nur Server)  
-6. ~~**[Eigene Nachrichten löschen](delete-messages.md)**~~, erledigt (`delete_own_message`, Papierkorb links neben Blase, `messageIsMine`)  
-7. Optional: Moderation-Reducer (Admin-`Identity` nur im Rust-Modul)
+- Echo-Schutz (`sender_room_state`), Purge per Index, Schedule-Cleanup bei User-Delete (Option B in [delete-messages.md](delete-messages.md))
 
 ---
 
@@ -239,6 +233,7 @@ SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 
 ## 7. Bewusst nicht Ziel
 
+- **Moderation durch Personen** (Moderatoren, Admin-Reducer zum Löschen fremder Nachrichten, Meldestaff pro Raum): praktisch unmöglich bei **einem Chat-Raum pro URL** und Milliarden möglicher Seiten; zudem werden **alle** Nachrichten nach **72 h** serverseitig gelöscht ([§6](#6-nachrichten-retention-72-stunden)), es gibt keinen dauerhaften Bestand, den Moderatoren pflegen müssten. Stattdessen: technische Grenzen (Rate-Limit, Zeichenregeln, Retention), Nutzer löschen **eigene** Nachrichten vorher optional ([delete-messages.md](delete-messages.md)), Safety-Hinweise in der UI (Info-Panel).
 - Geheime API-Keys in der Extension ([security.md](security.md))
 - Rate-Limit nur im UI ohne Server
 - `public` Tabellen komplett abschalten
