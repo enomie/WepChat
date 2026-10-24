@@ -159,3 +159,11 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
    Schließt ein Nutzer den Tab oder verliert die Verbindung, feuert SpacetimeDB diesen Reducer serverseitig. So bleibt der Presence-Zähler verlässlich aktuell.
 3. **Subscriptions statt Polling:**  
    In der Svelte-Extension wird keine REST-Abfrage (`fetch`) gemacht. Die Extension abonniert stattdessen `SELECT * FROM chat_message WHERE url = ...` und `SELECT * FROM user_session WHERE url = ...`. Neue Nachrichten und User-Änderungen pusht SpacetimeDB sofort per WebSocket.
+
+---
+
+### Wichtige Client- & Extension-Hinweise (Gotchas)
+* **Chrome Extension CSP (`unsafe-eval`)**: SpacetimeDB generiert intern dynamische Serializer via `new Function(...)`. Dies wird im Build über das Patch-Skript `scripts/patch-spacetimedb.js` automatisch auf statische Interpreter umgeschrieben.
+* **Reducer-Aufruf-Konvention**: Reducer werden im TypeScript SDK in **CamelCase** aufgerufen und erwarten ein **Parameter-Objekt** (z. B. `conn.reducers.joinRoom({ url, username })`).
+* Detaillierte Dokumentation dazu siehe: [learnings.md](../learnings.md).
+
