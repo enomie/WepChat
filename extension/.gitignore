@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+.output/chrome-mv3-dev/
 stats.html
 stats-*.json
 .wxt
