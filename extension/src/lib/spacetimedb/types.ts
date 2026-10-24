@@ -20,6 +20,19 @@ export const ChatMessage = __t.object("ChatMessage", {
 });
 export type ChatMessage = __Infer<typeof ChatMessage>;
 
+export const DeleteMessageSchedule = __t.object("DeleteMessageSchedule", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  messageId: __t.u64(),
+});
+export type DeleteMessageSchedule = __Infer<typeof DeleteMessageSchedule>;
+
+export const PurgeExpiredSchedule = __t.object("PurgeExpiredSchedule", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+});
+export type PurgeExpiredSchedule = __Infer<typeof PurgeExpiredSchedule>;
+
 export const UserSession = __t.object("UserSession", {
   identity: __t.identity(),
   currentUrl: __t.string(),

@@ -3,6 +3,7 @@
   import { urlState } from './lib/url.svelte';
   import { profileState } from './lib/profile.svelte';
   import { spacetimeChat } from './lib/spacetime.svelte';
+  import { rateLimitState } from './lib/rate-limit.svelte';
 
   let newMessage = $state('');
   let showSettings = $state(false);
@@ -11,8 +12,16 @@
   // Verbindung einmalig beim Laden aufbauen
   onMount(() => {
     spacetimeChat.connect();
-    return () => spacetimeChat.disconnect();
+    const tickId = setInterval(() => rateLimitState.bumpTick(), 1000);
+    return () => {
+      clearInterval(tickId);
+      spacetimeChat.disconnect();
+    };
   });
+
+  const cooldownMs = $derived(rateLimitState.cooldownRemainingMs());
+  const cooldownSecs = $derived(Math.ceil(cooldownMs / 1000));
+  const rateLimited = $derived(cooldownMs > 0);
 
   // Sobald URL + Username + connected: Raum abonnieren
   $effect(() => {
@@ -41,6 +50,7 @@
     const url = urlState.current;
     const username = profileState.current.username;
     if (!newMessage.trim() || !url || !spacetimeChat.current.connected) return;
+    if (!rateLimitState.canSend()) return;
     spacetimeChat.sendMessage(url, username, newMessage.trim());
     newMessage = '';
   }
@@ -114,23 +124,32 @@
 
   <!-- Eingabe -->
   <footer class="input-area">
-    <input
-      type="text"
-      bind:value={newMessage}
-      placeholder={!urlState.current
-        ? 'Kein Tab aktiv'
-        : !spacetimeChat.current.connected
-          ? 'Verbinde…'
-          : 'Nachricht schreiben…'}
-      disabled={!urlState.current || !spacetimeChat.current.connected}
-      onkeydown={(e) => e.key === 'Enter' && handleSend()}
-    />
-    <button
-      onclick={handleSend}
-      disabled={!newMessage.trim() || !spacetimeChat.current.connected || !urlState.current}
-    >
-      Senden
-    </button>
+    <div class="input-row">
+      <input
+        type="text"
+        class:muted={rateLimited}
+        bind:value={newMessage}
+        placeholder={!urlState.current
+          ? 'Kein Tab aktiv'
+          : !spacetimeChat.current.connected
+            ? 'Verbinde…'
+            : rateLimited
+              ? `Noch ${cooldownSecs}s…`
+              : 'Nachricht schreiben…'}
+        disabled={!urlState.current || !spacetimeChat.current.connected || rateLimited}
+        onkeydown={(e) => e.key === 'Enter' && handleSend()}
+      />
+      <button
+        onclick={handleSend}
+        class:muted={rateLimited}
+        disabled={!newMessage.trim() || !spacetimeChat.current.connected || !urlState.current || rateLimited}
+      >
+        {rateLimited ? `${cooldownSecs}s` : 'Senden'}
+      </button>
+    </div>
+    {#if spacetimeChat.current.connected && urlState.current}
+      <p class="rate-hint">Max. 2 Nachrichten pro Minute.</p>
+    {/if}
   </footer>
 </main>
 
@@ -251,11 +270,26 @@
 
   .input-area {
     display: flex;
+    flex-direction: column;
     padding: 10px;
-    gap: 8px;
+    gap: 6px;
     border-top: 1px solid #e2e8f0;
     background: #fff;
     flex-shrink: 0;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .rate-hint {
+    margin: 0;
+    font-size: 0.68rem;
+    color: #94a3b8;
+  }
+  .input-area input.muted,
+  .input-area button.muted {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
   .input-area input {
     flex: 1;

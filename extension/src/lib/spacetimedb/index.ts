@@ -51,7 +51,7 @@ const tablesSchema = __schema({
   chat_message: __table({
     name: 'chat_message',
     indexes: [
-      { name: 'id', accessor: 'id', algorithm: 'btree', columns: [
+      { accessor: 'id', name: 'id', algorithm: 'btree', columns: [
         'id',
       ] },
     ],
@@ -62,7 +62,7 @@ const tablesSchema = __schema({
   user_session: __table({
     name: 'user_session',
     indexes: [
-      { name: 'identity', accessor: 'identity', algorithm: 'btree', columns: [
+      { accessor: 'identity', name: 'identity', algorithm: 'btree', columns: [
         'identity',
       ] },
     ],

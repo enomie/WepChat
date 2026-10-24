@@ -27,6 +27,8 @@ spacetime login
 ```
 *(Es öffnet sich ein Browserfenster zur Bestätigung der Anmeldung.)*
 
+> **Sicherheit:** Dieses Login ist **nur für Entwickler** (Publish, Verwaltung). Es gehört **nicht** in die Browser-Extension. URI, Modulname und Client-Identity sind ein anderes Thema — siehe [security.md](../requirements/security.md).
+
 ---
 
 ### Phase 2: Backend-Projekt initialisieren
@@ -140,14 +142,18 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
    spacetime publish wepchat -y
    ```
 
-2. **TypeScript-Typen direkt für die Svelte-Extension erzeugen:**
+2. **TypeScript-Bindings für die Extension (inkl. Index-`accessor`-Patch):**
    ```bash
    cd /Users/johann/MyBrew/WepChat/server
-   spacetime generate wepchat --lang typescript --out-dir ../extension/src/lib/spacetimedb --module-path .
+   spacetime publish wepchat -y
+
+   cd ../extension
+   npm run codegen:stdb
    ```
+   (`codegen:stdb` = `spacetime generate --module-path ../server` + `scripts/patch-spacetimedb-codegen.js` — siehe [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).)
 
 > **Wichtiger Workflow:**  
-> Jedes Mal, wenn du in `server/src/lib.rs` Tabellen oder Reducers änderst, führst du erneut `spacetime publish wepchat -y` aus und regenerierst die TypeScript-Bindings.
+> Nach Änderungen in `server/src/lib.rs`: `spacetime publish wepchat -y`, dann `cd extension && npm run codegen:stdb`, danach `npm run build` und Extension neu laden.
 
 ---
 
@@ -157,61 +163,52 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
    SpacetimeDB vergibt jedem verbundenen Client automatisch eine manipulationssichere `Identity`. User müssen sich nicht registrieren; die Identität ist der Primärschlüssel.
 2. **Automatischer Disconnect (`#[reducer(client_disconnected)]`):**  
    Schließt ein Nutzer den Tab oder verliert die Verbindung, feuert SpacetimeDB diesen Reducer serverseitig. So bleibt der Presence-Zähler verlässlich aktuell.
-3. **Subscriptions statt Polling:**  
-   In der Svelte-Extension wird keine REST-Abfrage (`fetch`) gemacht. Die Extension abonniert stattdessen `SELECT * FROM chat_message WHERE url = ...` und `SELECT * FROM user_session WHERE url = ...`. Neue Nachrichten und User-Änderungen pusht SpacetimeDB sofort per WebSocket.
+3. **Subscriptions im Sidepanel:**  
+   Das Sidepanel nutzt WebSocket-Subscriptions (`chat_message` / `user_session` pro URL) — Push statt Polling. Der **Background Service Worker** für den Live-Badge nutzt zusätzlich einen leichten **HTTP-SQL**-Count (siehe [live_badge.md](../requirements/live_badge.md), [security.md](../requirements/security.md)).
 
 ---
 
 ### Wichtige Client- & Extension-Hinweise (Gotchas)
 * **Chrome Extension CSP (`unsafe-eval`)**: SpacetimeDB generiert intern dynamische Serializer via `new Function(...)`. Dies wird im Build über das Patch-Skript `scripts/patch-spacetimedb.js` automatisch auf statische Interpreter umgeschrieben.
 * **Reducer-Aufruf-Konvention**: Reducer werden im TypeScript SDK in **CamelCase** aufgerufen und erwarten ein **Parameter-Objekt** (z. B. `conn.reducers.joinRoom({ url, username })`).
+* **Codegen / Index-`accessor`:** immer `npm run codegen:stdb` in `extension/` — [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).
 * Detaillierte Dokumentation dazu siehe: [learnings.md](../learnings.md).
 
 ---
-# könnten wir es so machen, dass die nachrichten nach 72h automatisch gelöscht werden?
 
-**Ja, absolut! Das ist mit SpacetimeDB sogar besonders elegant und nativ möglich.**
+### Nachrichten-Retention (72 Stunden)
 
-Es gibt dafür zwei bewährte Ansätze in SpacetimeDB (ohne dass du einen externen Cronjob oder Worker brauchst):
+Chat-Nachrichten werden **nur serverseitig** gelöscht — **beide** Mechanismen zusammen (Doppel-Absicherung). Kein Client-Filter in der Subscription; die Extension lädt weiter `SELECT * FROM chat_message WHERE url = …` und erhält Deletes per Push.
 
----
+Vollständige Spezifikation: [security-list.md](../requirements/security-list.md#6-nachrichten-retention-72-stunden).
 
-### Möglichkeit 1: Scheduled Reducer (Nativer SpacetimeDB-Timer) – *Empfohlen*
-SpacetimeDB hat einen eingebauten Scheduler (`ctx.schedule`). 
-* Jedes Mal, wenn eine Nachricht mit `send_message` erstellt wird, planen wir direkt einen automatischen Reducer-Aufruf für genau `ctx.timestamp + 72 Stunden` mit der entsprechenden `message_id`.
-* Nach 72 Stunden führt die SpacetimeDB diesen Reducer eigenständig aus und löscht die Nachricht (`ctx.db.chat_message().id().delete(&id)`).
-* **Vorteil:** Jeder verbundene Client erfährt sofort in Echtzeit über seine Subscription, dass die Nachricht gelöscht wurde. Es entsteht keine plötzliche Batch-Last.
+| Mechanismus | Rolle |
+|-------------|--------|
+| **A — Scheduled Delete pro Nachricht** | Punktgenau ~72 h nach `created_at`; Echtzeit-Delete für Subscribers |
+| **B — Wiederkehrender Cleanup** | Fängt verpasste Timer, Reste und Alt-Daten ab |
 
----
+**A — Scheduled Table `delete_message_schedule`:** Nach `insert` in `send_message` eine Zeile mit `scheduled_at = created_at + 72h` (einmalig) → Reducer `delete_message`. Idempotent.
 
-### Möglichkeit 2: Wiederkehrender Cleanup-Job (z. B. alle 10 Minuten / stündlich)
-* Ein wiederkehrender Reducer prüft regelmäßig:
-  `DELETE FROM chat_message WHERE created_at < (jetzt - 72h)`.
-* **Vorteil:** Weniger Scheduler-Einträge bei extrem vielen Nachrichten.
+**B — Scheduled Table `purge_expired_schedule`:** Intervall **15 Min** (`ScheduleAt` aus `TimeDuration`) → Reducer `purge_expired_messages` löscht `created_at < now - 72h`. Bootstrap: `init` + `ensure_purge_job` in `join_room` / `send_message`.
 
----
+Implementierung: [server/src/lib.rs](../../server/src/lib.rs).
 
-### Client-Bonus (Sofort-Filterung)
-Zusätzlich kann man die Subscription im Plugin sofort so anpassen, dass gar nicht erst Nachrichten älter als 72h geladen werden:
-```sql
-SELECT * FROM chat_message WHERE url = '...' AND created_at > (jetzt - 72h)
-```
----
-
-**Ja, das passt genau so und ist sogar die beste und leichteste Lösung!**
-
-Hier ist der Grund, warum du **keine Räume vorab anlegen musst**:
+**Bewusst nicht:** Nur in der Extension ältere Nachrichten ausblenden — das wäre keine echte Retention ([security-list.md](../requirements/security-list.md)).
 
 ---
 
-### 1. URLs sind rein virtuelle Räume
+### Virtuelle Räume (keine `Room`-Tabelle)
+
+Es gibt absichtlich **keine `Room`-Tabelle**. Ein Raum existiert nur durch Zeilen in `user_session` / `chat_message` mit passender `url`.
+
+#### URLs sind rein virtuelle Räume
 Es gibt bei dir absichtlich **keine `Room`-Tabelle**, in der Räume gespeichert werden müssten. 
 * Ein Raum „existiert“ in SpacetimeDB einfach dadurch, dass in `user_session` (wer schaut gerade zu?) oder `chat_message` (was wurde geschrieben?) die Spalte `url` diesen Wert hat.
 * Wenn niemand auf der URL ist und nichts geschrieben wurde, belegt dieser Raum **0 Bytes** in der Datenbank.
 
 ---
 
-### 2. Warum siehst du Einträge in `user_session`, obwohl nichts geschrieben wurde?
+#### Warum Einträge in `user_session`, obwohl nichts geschrieben wurde?
 Das ist dein **Presence-Tracker (Live-Onlinezähler)**:
 * Sobald ein Nutzer mit geöffnetem Sidepanel auf z. B. `https://amazon.de/...` surft, ruft das Plugin `joinRoom({ url, username })` auf.
 * Dadurch weiß jeder andere Nutzer auf derselben Seite sofort: *„Aha, hier sind gerade 2 Leute online!“* – noch bevor irgendjemand eine Nachricht tippt.
@@ -223,6 +220,6 @@ Das ist dein **Presence-Tracker (Live-Onlinezähler)**:
 
 ---
 
-### Fazit
+#### Fazit
 * Die Datenbank „müllt“ dadurch **nicht** zu: `user_session` enthält immer nur die aktuell verbundenen User (wenn 5 Leute online sind, sind es exakt 5 Zeilen – egal wie viele URLs sie besuchen).
 * Räume entstehen spontan und verschwinden automatisch wieder, wenn alle weg sind. Du musst also nie manuell Räume verwalten oder initialisieren.

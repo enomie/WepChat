@@ -60,14 +60,16 @@ Chrome Manifest V3 unterscheidet strikt zwischen dem **Sidepanel** (UI, lebt nur
 
 Da der Service Worker im Hintergrund schlafen gelegt werden kann (Lifecycle von MV3 Service Workern), muss die Datenabfrage ressourcenschonend sein:
 
-### Option A: HTTP SQL Endpoint (`POST /database/sql`) – *Empfohlen für Background*
-SpacetimeDB bietet für jede Datenbank einen schnellen REST-Endpunkt:
+### Option A: HTTP SQL Endpoint – *Empfohlen für Background*
+SpacetimeDB Maincloud (wie in `extension/src/entrypoints/background.ts`):
 ```http
-POST https://maincloud.spacetimedb.com/database/sql/wepchat
+POST https://maincloud.spacetimedb.com/v1/database/wepchat/sql
 Content-Type: text/plain
 
-SELECT count(*) FROM user_session WHERE current_url = 'https://www.youtube.com/watch?v=...'
+SELECT count(*) as total FROM user_session WHERE current_url = 'https://www.youtube.com/watch?v=...'
 ```
+
+Öffentlicher Lesezugriff auf `public` Tabellen — kein Client-Secret. Siehe [security.md](security.md).
 * **Vorteil**: 
   * Extrem ressourcensparend (kein dauerhafter WebSocket im Background Service Worker).
   * Der Service Worker kann sich nach dem Request schlafen legen.

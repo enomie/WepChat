@@ -4,6 +4,7 @@
  */
 import { DbConnection } from './spacetimedb';
 import type { ChatMessage } from './spacetimedb/types';
+import { rateLimitState } from './rate-limit.svelte';
 
 const SPACETIMEDB_URI = 'wss://maincloud.spacetimedb.com';
 const MODULE_NAME = 'wepchat';
@@ -63,6 +64,12 @@ function createSpacetimeChat() {
               (a, b) => Number(a.id) - Number(b.id)
             );
           }
+        }
+      });
+
+      conn.db.chat_message.onDelete((_ctx, row) => {
+        if (row.url === subscribedUrl) {
+          state.messages = state.messages.filter((m) => m.id !== row.id);
         }
       });
 
@@ -138,6 +145,7 @@ function createSpacetimeChat() {
     if (!clean) return;
     try {
       conn.reducers.sendMessage({ url, username, text: clean });
+      rateLimitState.recordSend();
     } catch (err) {
       console.error('[WepChat] Sende-Fehler:', err);
     }

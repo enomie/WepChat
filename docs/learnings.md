@@ -2,6 +2,8 @@
 
 Dieses Dokument fasst die wichtigsten Erkenntnisse und Fallstricke beim Betrieb des **SpacetimeDB TypeScript SDKs** in einer **Chrome Extension (Manifest V3)** zusammen.
 
+**Zugangsdaten, Threat Model, öffentliche Tabellen:** [requirements/security.md](requirements/security.md)
+
 ---
 
 ## 1. Chrome Extension Content Security Policy (CSP) & `unsafe-eval`
@@ -52,11 +54,34 @@ Die dynamische Codegenerierung wurde durch CSP-konforme, statische Schleifen ers
    ```
 
 3. **Automatisierung via Postinstall-Script**:
-   Damit der Patch auch nach `npm install` oder Dependencies-Updates dauerhaft erhalten bleibt, führt `package.json` automatisch `node scripts/patch-spacetimedb.js` aus (`postinstall`: `wxt prepare && node scripts/patch-spacetimedb.js`).
+   Damit der Patch auch nach `npm install` oder Dependencies-Updates dauerhaft erhalten bleibt, führt `package.json` automatisch `node scripts/patch-spacetimedb.js` und `node scripts/patch-spacetimedb-codegen.js` aus (`postinstall` in `extension/package.json`).
 
 ---
 
-## 2. SpacetimeDB TypeScript SDK v2.x: Reducer-Aufrufkonvention
+## 2. TypeScript-Bindings: fehlendes Index-`accessor`
+
+### Das Problem
+```text
+Uncaught TypeError: Index 'id' on table 'chat_message' must define a non-empty 'accessor'
+```
+
+### Ursache
+Die SpacetimeDB-CLI (z. B. 2.0.x) schreibt in `extension/src/lib/spacetimedb/index.ts` Index-Metadaten nur mit `name`, `algorithm`, `columns`. Das npm-Paket `spacetimedb` (^2.13) verlangt zusätzlich **`accessor`** pro Index (z. B. `'id'`, `'identity'`).
+
+### Die Lösung
+1. Nach jedem `spacetime generate` im Extension-Ordner:
+   ```bash
+   cd extension
+   npm run codegen:stdb
+   ```
+   Das führt Generate + `scripts/patch-spacetimedb-codegen.js` aus (setzt `accessor` an den Btree-Indizes).
+2. `postinstall` wendet den Codegen-Patch an, falls `index.ts` schon im Repo liegt.
+
+Manuell (falls nötig): in `index.ts` bei jedem Index `{ accessor: 'id', name: 'id', ... }` ergänzen.
+
+---
+
+## 3. SpacetimeDB TypeScript SDK v2.x: Reducer-Aufrufkonvention
 
 ### Das Problem
 ```text
@@ -83,7 +108,7 @@ conn.reducers.leaveRoom({});
 
 ---
 
-## 3. Architektur: Eigener Server vs. SpacetimeDB
+## 4. Architektur: Eigener Server vs. SpacetimeDB
 
 - **Kein herkömmlicher Node/Express-Server nötig**:  
   Der Rust-Code unter `server/src/lib.rs` wird als WebAssembly kompiliert und direkt in die SpacetimeDB-Engine deployed (`spacetime publish wepchat -y`).
@@ -94,7 +119,7 @@ conn.reducers.leaveRoom({});
 
 ---
 
-## 4. Semantische URL-Normalisierung (Raum-Matching)
+## 5. Semantische URL-Normalisierung (Raum-Matching)
 
 ### Das Problem
 Im Web haben viele URLs unterschiedliche Query-Parameter für denselben Inhalt:
@@ -126,7 +151,7 @@ Die Funktion `cleanUrl()` unterscheidet zwischen **identitätsstiftenden Paramet
 
 ---
 
-## 5. Virtuelle Räume & Presence-Lifecycle
+## 6. Virtuelle Räume & Presence-Lifecycle
 
 ### Keine `Room`-Tabelle nötig
 WepChat benötigt keine eigene Raum-Tabelle in der Datenbank:
@@ -138,4 +163,29 @@ WepChat benötigt keine eigene Raum-Tabelle in der Datenbank:
 * Dadurch weiß jeder andere Besucher in Echtzeit: *„Hier sind gerade 2 Nutzer online“* (Presence-Tracking), noch bevor jemand etwas schreibt.
 * Pro Nutzer existiert in `user_session` genau **1 Zeile** (Primärschlüssel ist die SpacetimeDB `Identity`). Beim Wechsel der URL wird nur diese eine Zeile aktualisiert.
 * Trennt der Nutzer die Verbindung (Tab oder Browser schließen), löscht der serverseitige `client_disconnected`-Hook die Zeile automatisch wieder.
+
+---
+
+## 7. Svelte 5: Rate-Limit und `state_unsafe_mutation`
+
+### Das Problem
+```text
+Uncaught Error: https://svelte.dev/e/state_unsafe_mutation
+```
+Im Sidepanel, sobald `$derived(rateLimitState.cooldownRemainingMs())` aktiv ist.
+
+### Ursache
+In `rate-limit.svelte.ts` wurde `cooldownRemainingMs()` innerhalb von `$derived` in `App.svelte` aufgerufen und hat dort **`prune()`** ausgeführt — also `$state` (`sendTimestamps`) **während einer Derived-Berechnung** mutiert. Das verbietet Svelte 5.
+
+### Die Lösung (Implementierung)
+* **Lesen:** `activeTimestamps(now)` filtert nur, ohne Zuweisung an `$state`.
+* **Schreiben:** `prune()` nur in `recordSend()` und `bumpTick()` (1‑Sekunden-Timer in `App.svelte`).
+
+Spezifikation Rate-Limit: [security-list.md](requirements/security-list.md#1-nachrichten-rate-limit-2-pro-minute). Code: `extension/src/lib/rate-limit.svelte.ts`.
+
+---
+
+## 8. Security-Härtung (Rate-Limit, Retention)
+
+Server-Logik in `server/src/lib.rs` (2 Nachrichten / 60 s, 72 h Retention via Scheduled Tables). Übersicht: [security-list.md](requirements/security-list.md).
 

@@ -107,7 +107,8 @@ cd server
 spacetime publish wepchat    # or: spacetime publish --server local wepchat
 
 cd ../extension
-spacetime generate --lang typescript --out-dir src/lib/spacetimedb --project-path ../server
+npm run codegen:stdb    # generate + patch index accessors (see docs/learnings.md)
+npm run build
 ```
 
 The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module). Adjust `SPACETIMEDB_URI` / `MODULE_NAME` in `extension/src/lib/spacetime.svelte.ts` if you use a self-hosted instance.
@@ -116,6 +117,7 @@ The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module
 
 - [Concept & UX](docs/kickoff/konzept.md)
 - [Architecture requirements](docs/requirements/architektur.md)
+- [Security & secrets](docs/requirements/security.md)
 - [Setup walkthrough](docs/kickoff/setup.md)
 - [Go-live checklist](docs/kickoff/Live-Inbetriebnahme.md)
 
@@ -126,6 +128,7 @@ The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module
 - **No mandatory registration** — identity comes from SpacetimeDB’s connection identity; display name is a local pseudonym.
 - **Profile data** stays in `chrome.storage.local` (or Firefox equivalent).
 - **URLs are normalized** before room lookup (tracking params removed) to reduce fragmentation and accidental leakage of session tokens in query strings.
+- **Secrets & threat model** (CLI vs. client, public tables, what not to put in the extension): [docs/requirements/security.md](docs/requirements/security.md)
 
 ---
 

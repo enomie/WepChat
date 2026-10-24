@@ -41,6 +41,7 @@
 * **Lokale Datenspeicherung:** Profildaten (Pseudonym, Farb-Tag/Avatar) liegen ausschließlich im lokalen Speicher des Browsers (`chrome.storage.local`).
 * **Frei anpassbar:** Automatische Generierung eines zufälligen Pseudonyms (z. B. `Anon_8392`), das der User im Plugin-Interface jederzeit überschreiben kann.
 * **Anonymität:** Anonyme Identifikation gegenüber dem Server über zufällig generierte Verbindungsschlüssel (SpacetimeDB Identity).
+* **Sicherheit & Secrets:** Welche Zugangsdaten in die Extension dürfen (und welche nicht) — siehe [security.md](security.md).
 
 ---
 

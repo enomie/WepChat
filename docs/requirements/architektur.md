@@ -12,6 +12,7 @@ WepChat/                            <-- Projekt-Root
 │   │   └── svelte.md               <-- Svelte 5 Architektur & State Management
 │   ├── requirements/
 │   │   ├── general.md              <-- Allgemeine Anforderungen
+│   │   ├── security.md             <-- Secrets, Threat Model, SpacetimeDB-Zugang
 │   │   └── architektur.md          <-- Monorepo-Struktur & Aufteilung
 │   └── infos/                      <-- Notizen, Recherchen & API-Referenzen
 │
