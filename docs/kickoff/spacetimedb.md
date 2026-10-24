@@ -167,3 +167,62 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 * **Reducer-Aufruf-Konvention**: Reducer werden im TypeScript SDK in **CamelCase** aufgerufen und erwarten ein **Parameter-Objekt** (z. B. `conn.reducers.joinRoom({ url, username })`).
 * Detaillierte Dokumentation dazu siehe: [learnings.md](../learnings.md).
 
+---
+# könnten wir es so machen, dass die nachrichten nach 72h automatisch gelöscht werden?
+
+**Ja, absolut! Das ist mit SpacetimeDB sogar besonders elegant und nativ möglich.**
+
+Es gibt dafür zwei bewährte Ansätze in SpacetimeDB (ohne dass du einen externen Cronjob oder Worker brauchst):
+
+---
+
+### Möglichkeit 1: Scheduled Reducer (Nativer SpacetimeDB-Timer) – *Empfohlen*
+SpacetimeDB hat einen eingebauten Scheduler (`ctx.schedule`). 
+* Jedes Mal, wenn eine Nachricht mit `send_message` erstellt wird, planen wir direkt einen automatischen Reducer-Aufruf für genau `ctx.timestamp + 72 Stunden` mit der entsprechenden `message_id`.
+* Nach 72 Stunden führt die SpacetimeDB diesen Reducer eigenständig aus und löscht die Nachricht (`ctx.db.chat_message().id().delete(&id)`).
+* **Vorteil:** Jeder verbundene Client erfährt sofort in Echtzeit über seine Subscription, dass die Nachricht gelöscht wurde. Es entsteht keine plötzliche Batch-Last.
+
+---
+
+### Möglichkeit 2: Wiederkehrender Cleanup-Job (z. B. alle 10 Minuten / stündlich)
+* Ein wiederkehrender Reducer prüft regelmäßig:
+  `DELETE FROM chat_message WHERE created_at < (jetzt - 72h)`.
+* **Vorteil:** Weniger Scheduler-Einträge bei extrem vielen Nachrichten.
+
+---
+
+### Client-Bonus (Sofort-Filterung)
+Zusätzlich kann man die Subscription im Plugin sofort so anpassen, dass gar nicht erst Nachrichten älter als 72h geladen werden:
+```sql
+SELECT * FROM chat_message WHERE url = '...' AND created_at > (jetzt - 72h)
+```
+---
+
+**Ja, das passt genau so und ist sogar die beste und leichteste Lösung!**
+
+Hier ist der Grund, warum du **keine Räume vorab anlegen musst**:
+
+---
+
+### 1. URLs sind rein virtuelle Räume
+Es gibt bei dir absichtlich **keine `Room`-Tabelle**, in der Räume gespeichert werden müssten. 
+* Ein Raum „existiert“ in SpacetimeDB einfach dadurch, dass in `user_session` (wer schaut gerade zu?) oder `chat_message` (was wurde geschrieben?) die Spalte `url` diesen Wert hat.
+* Wenn niemand auf der URL ist und nichts geschrieben wurde, belegt dieser Raum **0 Bytes** in der Datenbank.
+
+---
+
+### 2. Warum siehst du Einträge in `user_session`, obwohl nichts geschrieben wurde?
+Das ist dein **Presence-Tracker (Live-Onlinezähler)**:
+* Sobald ein Nutzer mit geöffnetem Sidepanel auf z. B. `https://amazon.de/...` surft, ruft das Plugin `joinRoom({ url, username })` auf.
+* Dadurch weiß jeder andere Nutzer auf derselben Seite sofort: *„Aha, hier sind gerade 2 Leute online!“* – noch bevor irgendjemand eine Nachricht tippt.
+* In `user_session` gibt es **pro Person genau 1 Zeile** (Key ist die `Identity`). Wechselst du auf eine andere URL, wird nur dieser eine Eintrag aktualisiert:
+  ```rust
+  existing.current_url = clean_url;
+  ```
+* Schließt der Nutzer den Tab oder Browser, löscht SpacetimeDB diese Zeile über `client_disconnected` automatisch wieder.
+
+---
+
+### Fazit
+* Die Datenbank „müllt“ dadurch **nicht** zu: `user_session` enthält immer nur die aktuell verbundenen User (wenn 5 Leute online sind, sind es exakt 5 Zeilen – egal wie viele URLs sie besuchen).
+* Räume entstehen spontan und verschwinden automatisch wieder, wenn alle weg sind. Du musst also nie manuell Räume verwalten oder initialisieren.

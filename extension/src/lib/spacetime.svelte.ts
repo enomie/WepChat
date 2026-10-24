@@ -82,6 +82,19 @@ function createSpacetimeChat() {
       if (session.currentUrl === subscribedUrl) count++;
     }
     state.onlineCount = count;
+
+    // Badge synchronisieren, wenn Sidepanel offen ist
+    if (typeof chrome !== 'undefined' && chrome.action) {
+      chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+        if (tab?.id) {
+          const text = count > 1 ? (count > 999 ? '99+' : String(count)) : '';
+          chrome.action.setBadgeText({ text, tabId: tab.id }).catch(() => {});
+          if (text) {
+            chrome.action.setBadgeBackgroundColor({ color: '#2563EB', tabId: tab.id }).catch(() => {});
+          }
+        }
+      }).catch(() => {});
+    }
   }
 
   function subscribeToUrl(url: string, username: string) {

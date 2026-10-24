@@ -91,3 +91,51 @@ conn.reducers.leaveRoom({});
   Die Extension verbindet sich über das SDK direkt per WebSocket (`wss://maincloud.spacetimedb.com`) mit dem Modul `wepchat`.
 - **Presence & Lifecycle**:  
   Beim Schließen des Tabs oder Browserfensters greift serverseitig der `#[reducer(client_disconnected)]`-Hook in `server/src/lib.rs`, der die Benutzersitzung (`user_session`) automatisch löscht.
+
+---
+
+## 4. Semantische URL-Normalisierung (Raum-Matching)
+
+### Das Problem
+Im Web haben viele URLs unterschiedliche Query-Parameter für denselben Inhalt:
+* YouTube-Playlists: `https://www.youtube.com/watch?v=LnjxP6dqkDQ&list=RD...&start_radio=1`
+* Timestamps: `https://www.youtube.com/watch?v=LnjxP6dqkDQ&t=42s`
+* Share-Links: `https://youtu.be/LnjxP6dqkDQ?si=abc`
+* Tracking / Marketing: `?utm_source=twitter&ref=sr_1_1&fbclid=...`
+
+Würde man alle Query-Parameter pauschal abschneiden (`parsed.origin + parsed.pathname`), würden alle YouTube-Videos im selben Raum `https://www.youtube.com/watch` landen. Lässt man dagegen alle Parameter unverändert, landet jeder Nutzer mit einem anderen Tracking-Link in einem eigenen, isolierten Raum.
+
+### Die Lösung in `src/lib/url.svelte.ts`
+Die Funktion `cleanUrl()` unterscheidet zwischen **identitätsstiftenden Parametern** und **Tracking/Zustand**:
+
+1. **YouTube & Shortlinks**:
+   - `youtube.com/watch`: Behält ausschließlich `?v={id}`.
+   - `youtu.be/{id}` & `youtube.com/shorts/{id}`: Werden automatisch zu `https://www.youtube.com/watch?v={id}` kanonisiert.
+   - Playlists (`list`), Radios (`start_radio`), Timestamps (`t`) und Share-Tracker (`si`, `feature`) werden entfernt, damit alle Zuseher desselben Videos im selben Chatraum sind.
+
+2. **Amazon**:
+   - Beliebige Produktpfade (z. B. `/Apple-AirPods-.../dp/B07PZR3PVB/ref=...`) werden auf die kanonische ASIN reduziert: `https://amazon.de/dp/B07PZR3PVB`.
+
+3. **Google Suche**:
+   - Reduktion auf den Suchbegriff `?q=...`. Interne Tracking-Parameter (`oq`, `sourceid`, `crid`, etc.) fliegen raus.
+
+4. **Tracking-Filter für alle anderen Websites**:
+   - Entfernt bekannte Ad-/Tracking-Keys (`utm_*`, `ref`, `fbclid`, `gclid`, `session_id`, etc.).
+   - Relevante Parameter (z. B. `?id=123` oder `?page=2`) bleiben erhalten.
+   - URL-Hashes (`#section`) werden gestrippt.
+
+---
+
+## 5. Virtuelle Räume & Presence-Lifecycle
+
+### Keine `Room`-Tabelle nötig
+WepChat benötigt keine eigene Raum-Tabelle in der Datenbank:
+* Ein Raum ist rein **virtuell** durch den Wert der Spalte `url` in `user_session` und `chat_message` definiert.
+* Wenn eine Seite von niemandem besucht wird und keine Nachrichten existieren, belegt dieser Raum **0 Bytes**.
+
+### Warum gibt es `user_session`-Einträge ohne Nachrichten?
+* Sobald ein Nutzer mit geöffnetem Sidepanel auf eine Seite navigiert, meldet das Plugin den Nutzer per `conn.reducers.joinRoom({ url, username })` an.
+* Dadurch weiß jeder andere Besucher in Echtzeit: *„Hier sind gerade 2 Nutzer online“* (Presence-Tracking), noch bevor jemand etwas schreibt.
+* Pro Nutzer existiert in `user_session` genau **1 Zeile** (Primärschlüssel ist die SpacetimeDB `Identity`). Beim Wechsel der URL wird nur diese eine Zeile aktualisiert.
+* Trennt der Nutzer die Verbindung (Tab oder Browser schließen), löscht der serverseitige `client_disconnected`-Hook die Zeile automatisch wieder.
+

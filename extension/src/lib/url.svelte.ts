@@ -1,15 +1,9 @@
+import { cleanUrl } from './url-utils';
+
+export { cleanUrl };
+
 export function createUrlState() {
   let url = $state<string>('');
-
-  function cleanUrl(rawUrl: string): string {
-    try {
-      const parsed = new URL(rawUrl);
-      if (!parsed.protocol.startsWith('http')) return '';
-      return parsed.origin + parsed.pathname;
-    } catch {
-      return '';
-    }
-  }
 
   async function updateActiveUrl() {
     if (typeof browser !== 'undefined' && browser.tabs) {
