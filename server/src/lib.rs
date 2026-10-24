@@ -10,6 +10,7 @@ use spacetimedb::{
 const MAX_MESSAGES_PER_WINDOW: u32 = 2;
 const MAX_USERNAME_LEN: usize = 13;
 const MAX_MESSAGE_TEXT_LEN: usize = 400;
+const MAX_URL_LEN: usize = 2048;
 
 fn rate_window() -> TimeDuration {
     TimeDuration::from_micros(60 * 1_000_000)
@@ -193,6 +194,9 @@ fn host_is_public_chat_host(host: &str) -> bool {
 }
 
 fn url_allowed_for_chat(url: &str) -> bool {
+    if url.len() > MAX_URL_LEN {
+        return false;
+    }
     match extract_host_from_http_url(url) {
         Some(host) => host_is_public_chat_host(host),
         None => false,
@@ -372,6 +376,18 @@ fn delete_message(ctx: &ReducerContext, arg: DeleteMessageSchedule) {
     }
 }
 
+/// User deletes own row only (`ctx.sender`); see docs/requirements/delete-messages.md §3.2.
+#[reducer]
+pub fn delete_own_message(ctx: &ReducerContext, message_id: u64) {
+    let Some(msg) = ctx.db.chat_message().id().find(&message_id) else {
+        return;
+    };
+    if msg.sender_identity != ctx.sender {
+        return;
+    }
+    ctx.db.chat_message().id().delete(&message_id);
+}
+
 #[reducer]
 fn purge_expired_messages(ctx: &ReducerContext, _arg: PurgeExpiredSchedule) {
     if !only_scheduler(ctx) {
@@ -543,6 +559,18 @@ mod url_eligibility_tests {
         assert!(url_allowed_for_chat("https://example.com/path"));
         assert!(url_allowed_for_chat("https://localhost.example.com/"));
         assert!(url_allowed_for_chat("http://172.15.0.1/"));
+    }
+
+    #[test]
+    fn enforces_max_url_len() {
+        let base = "https://example.com/?p=";
+        let pad_2048 = format!("{}{}", base, "a".repeat(2048 - base.len()));
+        assert_eq!(pad_2048.len(), 2048);
+        assert!(url_allowed_for_chat(&pad_2048));
+
+        let pad_2049 = format!("{}{}", base, "a".repeat(2049 - base.len()));
+        assert_eq!(pad_2049.len(), 2049);
+        assert!(!url_allowed_for_chat(&pad_2049));
     }
 }
 

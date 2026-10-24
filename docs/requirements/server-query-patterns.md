@@ -13,6 +13,7 @@ Reducer-Logik in [`server/src/lib.rs`](../../server/src/lib.rs). Threat Model: [
 | `is_rate_limited` / `record_rate_send` | `send_rate_state.identity().find` / `update` | **`send_message`** (jedes Senden) |
 | `purge_expired_messages` | `iter()`, Filter `created_at < cutoff`, dann `id().delete` | Scheduler (~15 Min) |
 | `delete_message` | `id().find` / `id().delete` | Scheduler (pro Nachricht), **OK** (PK) |
+| `delete_own_message` | `id().find`, Prüfung `sender_identity`, `id().delete` | Client (eigene Nachricht), **OK** (PK) |
 
 `chat_message` hat heute nur **PK `id`**, keine B-Tree-Indizes auf `url`, `sender_identity` oder `created_at` (siehe Struct in `lib.rs`).
 
@@ -41,7 +42,7 @@ Kleine Tabellen, eine Zeile pro Schlüssel, **O(1)** per PK/`find`/`update`:
 
 Prüfung vor `insert`: nur `find`/`update` auf der Hilfstabelle, **kein** Lesen der Message-Historie.
 
-Das **2/Min-Limit** zählt **Send-Events** in `send_rate_state`, nicht Zeilen in `chat_message` (relevant für geplantes `delete_own_message`: Löschen einer Bubble senkt den Rate-Zähler nicht). Tests: `cd server && cargo test`.
+Das **2/Min-Limit** zählt **Send-Events** in `send_rate_state`, nicht Zeilen in `chat_message` (`delete_own_message`: Löschen senkt den Rate-Zähler nicht). Tests: `cd server && cargo test`.
 
 ### 3.2 B-Tree-Indizes auf `chat_message`
 

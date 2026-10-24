@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { urlState } from './lib/url.svelte';
   import { profileState } from './lib/profile.svelte';
-  import { isOwnMessage, spacetimeChat } from './lib/spacetime.svelte';
+  import { messageIsMine, spacetimeChat } from './lib/spacetime.svelte';
   import { rateLimitState } from './lib/rate-limit.svelte';
   import {
     filterMessageInput,
@@ -19,6 +19,7 @@
   import { tick } from 'svelte';
   import profileIcon from './assets/icons/profile.svg?raw';
   import infoIcon from './assets/icons/info.svg?raw';
+  import trashIcon from './assets/icons/trash.svg?raw';
   import { connectionErrorMessage, locale, t, tPlural } from './lib/i18n';
   import { formatMessageAgeIso, formatMessageAgeLabel } from './lib/message-age-label';
   import {
@@ -37,6 +38,9 @@
   let initialScrollDoneForUrl = $state<string | null>(null);
   let lastMessageCount = $state(0);
   let messageAgeNowMs = $state(Date.now());
+
+  const chatIdentity = $derived(spacetimeChat.current.identity);
+  const chatRoomName = $derived(spacetimeChat.current.roomDisplayName);
 
   // Connect once when the side panel loads
   onMount(() => {
@@ -184,6 +188,7 @@
   const canSendMessage = $derived(
     prepareMessageForSend(newMessage).length > 0 && !rateLimited
   );
+
 </script>
 
 <main class="chat-container" style="--wepchat-green: {WEPCHAT_GREEN}">
@@ -247,7 +252,9 @@
 
   {#if showInfo}
     <div class="info-panel">
-      <p><strong>{t('info.title')}</strong></p>
+      <p><strong>{t('info.ideaTitle')}</strong></p>
+      <p class="info-idea-text">{t('info.ideaText')}</p>
+      <p class="info-faq-heading"><strong>{t('info.title')}</strong></p>
       <ul>
         <li>{t('info.safety1')}</li>
         <li>{t('info.safety2')}</li>
@@ -271,7 +278,9 @@
 
   {#if showSettings}
     <div class="settings-panel">
-      <label for="username-input">{t('settings.pseudonymLabel')}</label>
+      <label for="username-input" class="settings-field-label">
+        <strong>{t('settings.pseudonymLabel')}</strong>
+      </label>
       <input
         id="username-input"
         type="text"
@@ -284,7 +293,9 @@
           {t('settings.roomDisplayName', { name: spacetimeChat.current.roomDisplayName })}
         </p>
       {/if}
-      <span id="nick-color-label" class="color-label">{t('settings.colorLabel')}</span>
+      <span id="nick-color-label" class="settings-field-label">
+        <strong>{t('settings.colorLabel')}</strong>
+      </span>
       <div
         class="color-swatches"
         role="radiogroup"
@@ -332,22 +343,46 @@
       {/if}
       {#each visibleMessages as msg (msg.id)}
         {@const nickStyles = nickColorStyles(normalizeNickColorId(msg.senderNickColor))}
+        {@const mine = messageIsMine(
+          msg,
+          chatIdentity,
+          chatRoomName,
+          profileState.current.username
+        )}
         {@const ageLabel = formatMessageAgeLabel(
           msg.createdAt,
           locale,
           messageAgeNowMs,
           t('messageAge.justNow')
         )}
-        <div
-          class="bubble {isOwnMessage(msg, spacetimeChat.current.identity) ? 'own' : ''}"
-          style:background={nickStyles.bubbleBackground}
-        >
-          <div class="bubble-meta">
-            <span class="sender" style:color={nickStyles.senderColor}>{msg.senderName}</span>
-            <time class="message-age" datetime={formatMessageAgeIso(msg.createdAt)}>{ageLabel}</time>
+        {#if mine}
+          <div class="message-row own">
+            <button
+              type="button"
+              class="delete-msg-btn"
+              aria-label={t('messages.deleteAria')}
+              title={t('messages.deleteAria')}
+              onclick={() => spacetimeChat.deleteOwnMessage(msg.id)}
+            >
+              {@html trashIcon}
+            </button>
+            <div class="bubble own" style:background={nickStyles.bubbleBackground}>
+              <div class="bubble-meta">
+                <span class="sender" style:color={nickStyles.senderColor}>{msg.senderName}</span>
+                <time class="message-age" datetime={formatMessageAgeIso(msg.createdAt)}>{ageLabel}</time>
+              </div>
+              <span class="text">{msg.text}</span>
+            </div>
           </div>
-          <span class="text">{msg.text}</span>
-        </div>
+        {:else}
+          <div class="bubble" style:background={nickStyles.bubbleBackground}>
+            <div class="bubble-meta">
+              <span class="sender" style:color={nickStyles.senderColor}>{msg.senderName}</span>
+              <time class="message-age" datetime={formatMessageAgeIso(msg.createdAt)}>{ageLabel}</time>
+            </div>
+            <span class="text">{msg.text}</span>
+          </div>
+        {/if}
       {/each}
     {/if}
   </div>
@@ -463,8 +498,8 @@
 
   .info-panel {
     padding: 10px 14px;
-    background: #f0f9ff;
-    border-bottom: 1px solid #bae6fd;
+    background: color-mix(in srgb, var(--wepchat-green) 16%, white);
+    border-bottom: 1px solid color-mix(in srgb, var(--wepchat-green) 32%, white);
     font-size: 0.78rem;
     line-height: 1.45;
     flex-shrink: 0;
@@ -472,6 +507,11 @@
 
   .info-panel p {
     margin: 0 0 6px;
+  }
+
+  .info-panel .info-idea-text {
+    margin-bottom: 8px;
+    color: #334155;
   }
 
   .info-panel .info-faq-heading {
@@ -528,11 +568,19 @@
     color: #64748b;
     line-height: 1.35;
   }
-  .color-label {
+  .settings-field-label {
     display: block;
-    margin-top: 10px;
+    margin-top: 0;
+    color: #1e293b;
+  }
+  .settings-field-label strong {
     font-weight: 600;
-    color: #64748b;
+  }
+  .settings-field-label + input {
+    margin-top: 4px;
+  }
+  #nick-color-label.settings-field-label {
+    margin-top: 10px;
   }
   .color-swatches {
     display: flex;
@@ -602,15 +650,51 @@
     align-self: flex-start;
     word-break: break-word;
   }
-  .bubble.own {
+  .message-row.own {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
     align-self: flex-end;
+    max-width: 88%;
+  }
+  .message-row.own .bubble {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
   }
   .bubble-meta {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
     gap: 0.35rem;
     margin-bottom: 2px;
+  }
+  .delete-msg-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+  .delete-msg-btn :global(svg) {
+    display: block;
+    width: 14px;
+    height: 14px;
+  }
+  .delete-msg-btn:hover {
+    color: #dc2626;
+  }
+  .delete-msg-btn:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 1px;
   }
   .sender {
     font-size: 0.7rem;

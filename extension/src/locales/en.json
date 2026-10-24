@@ -23,6 +23,8 @@
     "unsupportedShort": "Not supported"
   },
   "info": {
+    "ideaTitle": "The idea",
+    "ideaText": "Chat with others who are on the same page right now, like meeting someone in a shop who is into the same thing.",
     "title": "Your safety",
     "safety1": "Take care of yourself.",
     "safety2": "Ignore those who try to hurt or provoke you.",
@@ -63,7 +65,8 @@
     "openTab": "Open a website tab to load the chat.",
     "connectingToServer": "Connecting to server…",
     "empty": "No messages yet. Be the first!",
-    "loadOlder": "Load older messages"
+    "loadOlder": "Load older messages",
+    "deleteAria": "Delete message"
   },
   "input": {
     "placeholderNoTab": "No active tab",

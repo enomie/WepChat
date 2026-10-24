@@ -18,6 +18,7 @@ Siehe auch [ideas.md §5](../kickoff/ideas.md), [security-list.md §2](security-
 
 - Scheme: nur `http:` und `https:` (case-insensitive am Scheme).
 - Hostname: alles, was **nicht** unter §3 fällt (z. B. `example.com`, `www.amazon.de`).
+- Länge: höchstens **2048 Bytes** nach Normalisierung (Client `MAX_CHAT_URL_LEN`, Server `MAX_URL_LEN`).
 
 `cleanUrl()` normalisiert danach wie bisher (YouTube, Tracking-Parameter, …).
 
@@ -52,7 +53,7 @@ Siehe auch [ideas.md §5](../kickoff/ideas.md), [security-list.md §2](security-
 
 ## 5. Server
 
-- `url_allowed_for_chat(url)` in `join_room` und `send_message`.
+- `url_allowed_for_chat(url)` in `join_room` und `send_message` (inkl. max. 2048 Bytes).
 - `send_message`: zusätzlich `url` muss `user_session.current_url` entsprechen (Anti-Spoofing).
 
 ---

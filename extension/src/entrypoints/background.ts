@@ -1,4 +1,5 @@
 import { cleanUrl } from '@/lib/url-utils';
+import { escapeSqlStringLiteral } from '@/lib/sql-literal-escape';
 
 const SPACETIMEDB_SQL_URL = 'https://maincloud.spacetimedb.com/v1/database/wepchat/sql';
 const BADGE_COLOR = '#2563EB'; // WepChat Blau
@@ -16,9 +17,7 @@ async function fetchOnlineCount(url: string): Promise<number> {
     return cached.count;
   }
 
-  // Escape einfaches Anführungszeichen für SQL
-  const escapedUrl = url.replace(/'/g, "''");
-  const query = `SELECT count(*) as total FROM user_session WHERE current_url = '${escapedUrl}'`;
+  const query = `SELECT count(*) as total FROM user_session WHERE current_url = '${escapeSqlStringLiteral(url)}'`;
 
   try {
     const response = await fetch(SPACETIMEDB_SQL_URL, {

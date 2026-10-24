@@ -223,3 +223,6 @@ Nein. Sicherheit kommt aus Reducer-Logik, Tabellen-Sichtbarkeit und Betrieb, nic
 
 **„Ist `sender_name` vertrauenswürdig?“**  
 Nein, nur Anzeige. Vertrauenswürdig ist **`sender_identity`** (`ctx.sender`), die der Server der Verbindung zuordnet.
+
+**„Kann Nutzer eigene Nachrichten löschen?“**  
+Ja, Papierkorb links neben der eigenen Blase (ein Klick). Server: nur `delete_own_message` bei passender `sender_identity`. Details: [delete-messages.md](delete-messages.md).

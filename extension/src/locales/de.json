@@ -23,6 +23,8 @@
     "unsupportedShort": "Nicht verfügbar"
   },
   "info": {
+    "ideaTitle": "Die Idee",
+    "ideaText": "Chatte mit anderen, die gerade dieselbe Seite besuchen, wie ein kurzes Gespräch im Laden mit jemandem, der sich für das Gleiche interessiert.",
     "title": "Deine Sicherheit",
     "safety1": "Pass auf dich auf.",
     "safety2": "Ignoriere alle, die dich verletzen oder provozieren wollen.",
@@ -63,7 +65,8 @@
     "openTab": "Öffne einen Website-Tab um den Chat zu laden.",
     "connectingToServer": "Verbinde mit Server…",
     "empty": "Noch keine Nachrichten. Sei der Erste!",
-    "loadOlder": "Ältere Nachrichten laden"
+    "loadOlder": "Ältere Nachrichten laden",
+    "deleteAria": "Nachricht löschen"
   },
   "input": {
     "placeholderNoTab": "Kein Tab aktiv",

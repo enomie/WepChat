@@ -28,6 +28,9 @@ const TRACKING_PARAMS = new Set([
 
 const LOCALHOST_NAMES = new Set(['localhost', 'localhost.localdomain']);
 
+/** Max byte length for chat room URLs after normalization (server: MAX_URL_LEN). */
+export const MAX_CHAT_URL_LEN = 2048;
+
 export type TabChatUrlState =
   | { kind: 'none' }
   | { kind: 'unsupported' }
@@ -178,7 +181,9 @@ export function cleanUrl(rawUrl: string): string {
       pathname = pathname.slice(0, -1);
     }
 
-    return `${parsed.origin}${pathname}${query ? `?${query}` : ''}`;
+    const result = `${parsed.origin}${pathname}${query ? `?${query}` : ''}`;
+    if (result.length > MAX_CHAT_URL_LEN) return '';
+    return result;
   } catch {
     return '';
   }

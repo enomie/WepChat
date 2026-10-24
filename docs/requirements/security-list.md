@@ -11,7 +11,7 @@ Priorisierte Maßnahmen für `server/` und `extension/`. Übergreifendes Threat 
 3. Extension: SQL-Escape in Subscriptions, Localhost in `cleanUrl`  
 4. ~~**[Nachrichten-Inhalt (erlaubte Zeichen)](message-content.md)**~~, erledigt  
 5. **[Nachrichten-Retention 72 h](#6-nachrichten-retention-72-stunden)**, Scheduled Delete **+** Cleanup-Job (nur Server)  
-6. **[Eigene Nachrichten löschen](delete-messages.md)**, Reducer `delete_own_message` (nur `ctx.sender`); Extension: Trash, `bubble own` über Identity (Anzeige weiter `sender_name`)  
+6. ~~**[Eigene Nachrichten löschen](delete-messages.md)**~~, erledigt (`delete_own_message`, Papierkorb links neben Blase, `messageIsMine`)  
 7. Optional: Moderation-Reducer (Admin-`Identity` nur im Rust-Modul)
 
 ---
@@ -115,7 +115,7 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 
 | Maßnahme | Problem heute | Idee |
 |----------|----------------|------|
-| **Längenlimits** | URL noch offen | Username **13**, Text **400** ✓, [message-content.md §3.1](message-content.md#31-maximale-länge-zeichen); URL ≤ 2 KB Backlog |
+| **Längenlimits** ✓ | — | Username **13**, Text **400**, URL **2048** Bytes ([url-eligibility.md](url-eligibility.md)); [message-content.md §3.1](message-content.md#31-maximale-länge-zeichen) |
 | **Username normalisieren** | Unicode/Steuerzeichen | `trim()`, Whitelist ([ideas.md](../kickoff/ideas.md)) |
 | **Nur `http`/`https`** ✓ | Exotische Schemes | [url-eligibility.md](url-eligibility.md) |
 | **Localhost / private URLs** ✓ | Interne URLs als Raum | [url-eligibility.md](url-eligibility.md) |
@@ -132,7 +132,7 @@ Retention 72 h: eigene Spezifikation in [Abschnitt 6](#6-nachrichten-retention
 // Längenlimits (umgesetzt in lib.rs)
 const MAX_MESSAGE_TEXT_LEN: usize = 400;
 const MAX_USERNAME_LEN: usize = 13;
-// Backlog: MAX_URL_LEN: usize = 2048;
+const MAX_URL_LEN: usize = 2048;
 ```
 
 ---
@@ -141,7 +141,7 @@ const MAX_USERNAME_LEN: usize = 13;
 
 | Maßnahme | Ort | Anmerkung |
 |----------|-----|-----------|
-| **SQL escapen** | `spacetime.svelte.ts` (Subscriptions) | `'` in URL; Pattern wie `background.ts` |
+| **SQL escapen** ✓ | `sql-literal-escape.ts`, `spacetime.svelte.ts`, `background.ts` | `'` in URL für Subscription-SQL und Badge-Count |
 | **Localhost** | `cleanUrl()` / `url.svelte.ts` | Kein Chat-Raum |
 | **Nachrichten vor Send** | erledigt | [message-content.md](message-content.md) |
 | **Identity-Token** | `spacetime.svelte.ts` | Optional `storage.local` für stabile Identity |

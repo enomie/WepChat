@@ -13,7 +13,7 @@
     "zip:chrome": "node scripts/zip-chrome-mv3.mjs",
     "zip:firefox": "wxt zip -b firefox",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test:unit": "node --experimental-strip-types --test src/lib/message-history.test.ts src/lib/message-age-label.test.ts src/lib/i18n/resolve-locale.test.ts src/lib/message-text-policy.test.ts src/lib/nick-colors.test.ts src/lib/brand-colors.test.ts src/lib/url-utils.test.ts",
+    "test:unit": "node --experimental-strip-types --test src/lib/message-history.test.ts src/lib/message-age-label.test.ts src/lib/i18n/resolve-locale.test.ts src/lib/message-text-policy.test.ts src/lib/nick-colors.test.ts src/lib/brand-colors.test.ts src/lib/url-utils.test.ts src/lib/sql-literal-escape.test.ts",
     "check:locales": "node scripts/validate-locale-keys.js",
     "icons:generate": "node scripts/generate-icons.js",
     "publish:chrome": "npm run test:unit && npm run check:locales && npm run icons:generate && npm run build",

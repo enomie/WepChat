@@ -81,4 +81,11 @@ describe('cleanUrl', () => {
       'https://www.youtube.com/watch?v=abc123'
     );
   });
+
+  it('returns empty when normalized URL exceeds max length', () => {
+    const base = 'https://example.com/?p=';
+    const pad = 'a'.repeat(2048 - base.length);
+    assert.equal(cleanUrl(`${base}${pad}`).length, 2048);
+    assert.equal(cleanUrl(`${base}${pad}a`), '');
+  });
 });

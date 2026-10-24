@@ -13,6 +13,7 @@ import {
   nextVisibleLimit,
   MESSAGE_PAGE_SIZE,
 } from './message-history';
+import { escapeSqlStringLiteral } from './sql-literal-escape';
 
 const SPACETIMEDB_URI = 'wss://maincloud.spacetimedb.com';
 const MODULE_NAME = 'wepchat';
@@ -29,9 +30,25 @@ export interface ChatState {
   error: ChatConnectionError | null;
 }
 
+/** Server auth uses identity; UI also matches room display name for reliable own-bubble detection. */
+export function messageIsMine(
+  msg: ChatMessage,
+  identityHex: string | null,
+  roomDisplayName: string | null,
+  localUsername: string,
+): boolean {
+  if (identityHex) {
+    const mine =
+      msg.senderIdentity.toHexString().toLowerCase() === identityHex.toLowerCase();
+    if (mine) return true;
+  }
+  const label = (roomDisplayName ?? localUsername).trim();
+  return label.length > 0 && msg.senderName === label;
+}
+
+/** @deprecated Use messageIsMine for UI; kept for tests/call sites */
 export function isOwnMessage(msg: ChatMessage, identityHex: string | null): boolean {
-  if (!identityHex) return false;
-  return msg.senderIdentity.toHexString() === identityHex;
+  return messageIsMine(msg, identityHex, null, '');
 }
 
 function createSpacetimeChat() {
@@ -195,8 +212,8 @@ function createSpacetimeChat() {
           onUserSessionChange();
         })
         .subscribe([
-          `SELECT * FROM chat_message WHERE url = '${url}'`,
-          `SELECT * FROM user_session WHERE current_url = '${url}'`,
+          `SELECT * FROM chat_message WHERE url = '${escapeSqlStringLiteral(url)}'`,
+          `SELECT * FROM user_session WHERE current_url = '${escapeSqlStringLiteral(url)}'`,
         ]);
     }
 
@@ -215,6 +232,18 @@ function createSpacetimeChat() {
       rateLimitState.recordSend();
     } catch (err) {
       console.error('[WepChat] Send error:', err);
+    }
+  }
+
+  function deleteOwnMessage(messageId: bigint) {
+    if (!conn || !state.connected) {
+      console.warn('[WepChat] Not connected; delete dropped.');
+      return;
+    }
+    try {
+      conn.reducers.deleteOwnMessage({ messageId });
+    } catch (err) {
+      console.warn('[WepChat] deleteOwnMessage error:', err);
     }
   }
 
@@ -247,6 +276,7 @@ function createSpacetimeChat() {
     subscribeToUrl,
     clearRoomPresence,
     sendMessage,
+    deleteOwnMessage,
     disconnect,
     loadOlderVisible,
   };

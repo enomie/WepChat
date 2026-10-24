@@ -14,6 +14,7 @@ Verwandt: [spacetimedb.md](../kickoff/spacetimedb.md), [security.md](../requirem
 | **Server + neues Schema/Reducer-Signatur** | `server/` + `extension/` | Publish → `npm run codegen:stdb` → Extension neu laden/build |
 | **Store-ZIP (Chrome)** | `extension/` | Version bump → `npm run publish:chrome` |
 | **Lokale Extension ohne ZIP** | `extension/` | `npm run check` → `npm run build` → in `chrome://extensions` neu laden |
+| **Entpackt aus `.output/chrome-mv3`** | `extension/` | Nach **jeder** Änderung unter `extension/src/`: `npm run build` (schreibt `.output/chrome-mv3`), dann Extension **Aktualisieren** |
 
 **Live-Backend:** Modul `wepchat` auf `maincloud.spacetimedb.com` (Client: `extension/src/lib/spacetime.svelte.ts`). Dashboard: https://spacetimedb.com/wepchat
 
