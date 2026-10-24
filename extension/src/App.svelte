@@ -56,15 +56,19 @@
   const cooldownSecs = $derived(Math.ceil(cooldownMs / 1000));
   const rateLimited = $derived(cooldownMs > 0);
 
+  const tabChat = $derived(urlState.tab);
+
   // Subscribe to room when URL, profile, and connection are ready
   $effect(() => {
-    const url = urlState.current;
+    const tab = tabChat;
     const username = profileState.current.username;
     const nickColorId = profileState.current.nickColorId;
     const connected = spacetimeChat.current.connected;
 
-    if (url && username && connected) {
-      spacetimeChat.subscribeToUrl(url, username, nickColorId);
+    if (tab.kind === 'ready' && username && connected) {
+      spacetimeChat.subscribeToUrl(tab.url, username, nickColorId);
+    } else if (connected) {
+      spacetimeChat.clearRoomPresence();
     }
   });
 
@@ -227,9 +231,18 @@
 
   <div class="room-bar">
     <span class="label">{t('room.label')}</span>
-    <span class="url" title={urlState.current || ''}
-      >{urlState.current || t('room.noActiveTab')}</span
+    <span
+      class="url"
+      title={tabChat.kind === 'ready' ? tabChat.url : ''}
     >
+      {#if tabChat.kind === 'ready'}
+        {tabChat.url}
+      {:else if tabChat.kind === 'unsupported'}
+        {t('room.unsupportedShort')}
+      {:else}
+        {t('room.noActiveTab')}
+      {/if}
+    </span>
   </div>
 
   {#if showInfo}
@@ -299,7 +312,9 @@
   {/if}
 
   <div class="messages" bind:this={messagesContainer}>
-    {#if !urlState.current}
+    {#if tabChat.kind === 'unsupported'}
+      <div class="empty">{t('messages.unsupportedSite')}</div>
+    {:else if tabChat.kind === 'none'}
       <div class="empty">{t('messages.openTab')}</div>
     {:else if !spacetimeChat.current.connected}
       <div class="empty">
@@ -346,7 +361,9 @@
         value={newMessage}
         oninput={handleMessageInput}
         onpaste={handleMessagePaste}
-        placeholder={!urlState.current
+        placeholder={tabChat.kind === 'unsupported'
+          ? t('input.placeholderUnsupported')
+          : tabChat.kind !== 'ready'
           ? t('input.placeholderNoTab')
           : !spacetimeChat.current.connected
             ? t('input.placeholderConnecting')

@@ -26,16 +26,85 @@ const TRACKING_PARAMS = new Set([
   'sessionId',
 ]);
 
+const LOCALHOST_NAMES = new Set(['localhost', 'localhost.localdomain']);
+
+export type TabChatUrlState =
+  | { kind: 'none' }
+  | { kind: 'unsupported' }
+  | { kind: 'ready'; url: string };
+
+function parseIpv4Octets(host: string): number[] | null {
+  const parts = host.split('.');
+  if (parts.length !== 4) return null;
+  const octets: number[] = [];
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part)) return null;
+    const n = Number(part);
+    if (n > 255) return null;
+    octets.push(n);
+  }
+  return octets;
+}
+
+/** Host blocklist for chat rooms (local/private only, not content categories). */
+export function isPrivateOrLocalHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+
+  if (LOCALHOST_NAMES.has(host)) return true;
+  if (host === '0.0.0.0') return true;
+
+  if (host.includes(':')) {
+    if (host === '::1') return true;
+    if (host.startsWith('fe80:')) return true;
+    if (host.startsWith('fc') || host.startsWith('fd')) return true;
+    return false;
+  }
+
+  const octets = parseIpv4Octets(host);
+  if (!octets) return false;
+
+  const [a, b] = octets;
+  if (a === 127) return true;
+  if (a === 10) return true;
+  if (a === 172 && b !== undefined && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 169 && b === 254) return true;
+
+  return false;
+}
+
+export function isChatEligibleParsedUrl(parsed: URL): boolean {
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  return !isPrivateOrLocalHost(parsed.hostname);
+}
+
+export function resolveTabChatUrl(rawUrl: string | undefined): TabChatUrlState {
+  if (!rawUrl?.trim()) return { kind: 'none' };
+  try {
+    const parsed = new URL(rawUrl);
+    if (!isChatEligibleParsedUrl(parsed)) {
+      return { kind: 'unsupported' };
+    }
+  } catch {
+    return { kind: 'none' };
+  }
+
+  const url = cleanUrl(rawUrl);
+  if (!url) return { kind: 'none' };
+  return { kind: 'ready', url };
+}
+
 /**
  * Normalisiert eine Web-URL semantisch:
- * 1. Plattform-Ausnahmen (YouTube, Amazon, etc.), bei denen Parameter den Inhalt bestimmen
- * 2. Bereinigung von Tracking- und Session-Parametern
- * 3. Entfernung von URL-Hashes (#anchors)
+ * 1. Nur öffentliche http(s)-URLs (siehe url-eligibility.md)
+ * 2. Plattform-Ausnahmen (YouTube, Amazon, etc.)
+ * 3. Bereinigung von Tracking- und Session-Parametern
+ * 4. Entfernung von URL-Hashes (#anchors)
  */
 export function cleanUrl(rawUrl: string): string {
   try {
     const parsed = new URL(rawUrl);
-    if (!parsed.protocol.startsWith('http')) return '';
+    if (!isChatEligibleParsedUrl(parsed)) return '';
 
     const hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
 

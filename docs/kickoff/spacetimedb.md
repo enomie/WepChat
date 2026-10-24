@@ -176,7 +176,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 * **Reducer-Aufruf-Konvention**: Reducer werden im TypeScript SDK in **CamelCase** aufgerufen und erwarten ein **Parameter-Objekt** (z. B. `conn.reducers.joinRoom({ url, username })`).
 * **Codegen / Index-`accessor`:** immer `npm run codegen:stdb` in `extension/`, [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).
 * **Nachrichten-Inhalt:** `send_message` und `join_room` validieren erlaubte Zeichen, [message-content.md](../requirements/message-content.md).
-* **Kein `chat_message().iter()` auf dem Send-Pfad:** Rate-Limit/Echo über Hilfstabellen, Purge über `created_at`-Index, [server-query-patterns.md](../requirements/server-query-patterns.md), [learnings.md §11](../learnings.md#11-kein-chat_message-vollscan-in-reducern).
+* **Kein `chat_message().iter()` auf dem Send-Pfad:** Rate-Limit/Echo über Hilfstabellen, Purge über `created_at`-Index, [server-query-patterns.md](../requirements/server-query-patterns.md), [learnings.md §12](../learnings.md#12-kein-chat_message-vollscan-in-reducern).
 * Detaillierte Dokumentation dazu siehe: [learnings.md](../learnings.md).
 
 ---

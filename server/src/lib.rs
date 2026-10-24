@@ -95,6 +95,110 @@ fn within_char_limit(s: &str, max: usize) -> bool {
     s.chars().count() <= max
 }
 
+// docs/requirements/url-eligibility.md — keep in sync with extension/src/lib/url-utils.ts
+fn extract_host_from_http_url(url: &str) -> Option<&str> {
+    let trimmed = url.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    let after_scheme = if lower.starts_with("https://") {
+        trimmed.get(8..)?
+    } else if lower.starts_with("http://") {
+        trimmed.get(7..)?
+    } else {
+        return None;
+    };
+
+    if after_scheme.is_empty() {
+        return None;
+    }
+
+    if after_scheme.starts_with('[') {
+        let end = after_scheme.find(']')?;
+        return after_scheme.get(1..end);
+    }
+
+    let end = after_scheme
+        .find(|c| c == '/' || c == '?' || c == '#')
+        .unwrap_or(after_scheme.len());
+    let host_with_port = after_scheme.get(..end)?;
+    let host = host_with_port
+        .rsplit_once(':')
+        .filter(|(h, port)| !h.contains(':') && port.chars().all(|c| c.is_ascii_digit()))
+        .map(|(h, _)| h)
+        .unwrap_or(host_with_port);
+    if host.is_empty() {
+        None
+    } else {
+        Some(host)
+    }
+}
+
+fn parse_ipv4_octets(host: &str) -> Option<[u8; 4]> {
+    let parts: Vec<&str> = host.split('.').collect();
+    if parts.len() != 4 {
+        return None;
+    }
+    let mut octets = [0u8; 4];
+    for (i, part) in parts.iter().enumerate() {
+        if part.is_empty() || part.len() > 3 || !part.chars().all(|c| c.is_ascii_digit()) {
+            return None;
+        }
+        let n: u16 = part.parse().ok()?;
+        if n > 255 {
+            return None;
+        }
+        octets[i] = n as u8;
+    }
+    Some(octets)
+}
+
+fn host_is_public_chat_host(host: &str) -> bool {
+    let h = host.to_ascii_lowercase();
+
+    if h == "localhost" || h == "localhost.localdomain" || h == "0.0.0.0" {
+        return false;
+    }
+
+    if h.contains(':') {
+        if h == "::1" {
+            return false;
+        }
+        if h.starts_with("fe80:") {
+            return false;
+        }
+        if h.starts_with("fc") || h.starts_with("fd") {
+            return false;
+        }
+        return true;
+    }
+
+    if let Some([a, b, _, _]) = parse_ipv4_octets(&h) {
+        if a == 127 {
+            return false;
+        }
+        if a == 10 {
+            return false;
+        }
+        if a == 172 && (16..=31).contains(&b) {
+            return false;
+        }
+        if a == 192 && b == 168 {
+            return false;
+        }
+        if a == 169 && b == 254 {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn url_allowed_for_chat(url: &str) -> bool {
+    match extract_host_from_http_url(url) {
+        Some(host) => host_is_public_chat_host(host),
+        None => false,
+    }
+}
+
 fn normalize_allowed_text(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
@@ -312,7 +416,7 @@ pub fn identity_disconnected(ctx: &ReducerContext) {
 #[reducer]
 pub fn join_room(ctx: &ReducerContext, url: String, username: String, nick_color: u8) {
     let clean_url = url.trim().to_string();
-    if clean_url.is_empty() {
+    if clean_url.is_empty() || !url_allowed_for_chat(&clean_url) {
         return;
     }
 
@@ -374,7 +478,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
     let clean_text = text.trim().to_string();
     let clean_url = url.trim().to_string();
 
-    if clean_text.is_empty() || clean_url.is_empty() {
+    if clean_text.is_empty() || clean_url.is_empty() || !url_allowed_for_chat(&clean_url) {
         return;
     }
 
@@ -396,6 +500,10 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         return;
     };
 
+    if session.current_url != clean_url {
+        return;
+    }
+
     if is_rate_limited(ctx, ctx.sender) {
         return;
     }
@@ -414,6 +522,28 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 
     schedule_message_deletion(ctx, row.id, row.created_at);
     record_rate_send(ctx, ctx.sender, ctx.timestamp);
+}
+
+#[cfg(test)]
+mod url_eligibility_tests {
+    use super::*;
+
+    #[test]
+    fn blocks_localhost_and_private_hosts() {
+        assert!(!url_allowed_for_chat("http://localhost:3000/"));
+        assert!(!url_allowed_for_chat("http://localhost.localdomain/"));
+        assert!(!url_allowed_for_chat("http://127.0.0.1/"));
+        assert!(!url_allowed_for_chat("http://192.168.0.1/"));
+        assert!(!url_allowed_for_chat("http://[::1]/"));
+        assert!(!url_allowed_for_chat("chrome://settings"));
+    }
+
+    #[test]
+    fn allows_public_https() {
+        assert!(url_allowed_for_chat("https://example.com/path"));
+        assert!(url_allowed_for_chat("https://localhost.example.com/"));
+        assert!(url_allowed_for_chat("http://172.15.0.1/"));
+    }
 }
 
 #[cfg(test)]

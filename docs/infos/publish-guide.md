@@ -80,7 +80,7 @@ cd extension
 npm run test:unit
 npm run check:locales
 npm run check          # svelte-check (TypeScript + Svelte)
-npm run build          # oder build:firefox
+npm run build          # Production + `chrome-mv3.zip` (oder build:firefox)
 ```
 
 ### Store-Paket Chrome (alles in einem)
@@ -91,7 +91,7 @@ npm run publish:chrome
 
 Führt aus: Unit-Tests, Locale-Check, `icons:generate`, Production-Build, ZIP.
 
-**Upload-Datei:** `extension/.output/wepchat-<version>-chrome.zip` (`package.json` `name` + `version`).
+**Upload-Datei:** `extension/.output/chrome-mv3.zip` (wird bei jedem `npm run build` neu erzeugt, neben dem Ordner `chrome-mv3/`).
 
 **Version vor jedem Store-Upload** in beiden Dateien gleich setzen:
 
@@ -120,7 +120,7 @@ npm run publish:chrome
 ## 5. Chrome Web Store Dashboard
 
 1. [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) (einmalige Registrierungsgebühr).
-2. **Neues Element** oder bestehendes Item → **Paket** → ZIP hochladen (`wepchat-*-chrome.zip`).
+2. **Neues Element** oder bestehendes Item → **Paket** → ZIP hochladen (`extension/.output/chrome-mv3.zip`).
 3. **Store-Eintrag** (DE/EN nach Bedarf):
    - **Name:** WepChat (Manifest: `_locales` `extName`)
    - **Kurzbeschreibung:** aus `extDescription` in `extension/public/_locales/`

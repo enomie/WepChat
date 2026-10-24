@@ -201,7 +201,15 @@ Server-Logik in `server/src/lib.rs` (2 Nachrichten / 60 s, 72 h Retention vi
 
 ---
 
-## 10. Identity-Limits und Spam
+## 10. URL-Eligibility (öffentliche Räume)
+
+- **Regel:** Nur öffentliche `http`/`https`-Hosts; localhost, private/link-local IPs und Browser-interne Schemes werden abgelehnt. Spec: [url-eligibility.md](requirements/url-eligibility.md).
+- **Client:** `resolveTabChatUrl` / `cleanUrl` in `url-utils.ts`; Tab-Wechsel weg vom Raum ruft `clearRoomPresence()` → `leaveRoom`.
+- **Server:** `url_allowed_for_chat` in `join_room` und `send_message`; `send_message` verlangt `url == session.current_url`.
+
+---
+
+## 11. Identity-Limits und Spam
 
 - SpacetimeDB-**Identity** in der Extension hängt am **lokalen Token** (Browser-Storage / Profil). Jede neue Identity startet mit leerer Historie.
 - **Server-Limits pro `ctx.sender`** (z. B. „100 Nachrichten / 72 h pro Raum“) sind per Script umgehbar: Storage leeren, Profil wechseln, erneut verbinden, Zähler **0**.
@@ -210,7 +218,7 @@ Server-Logik in `server/src/lib.rs` (2 Nachrichten / 60 s, 72 h Retention vi
 
 ---
 
-## 11. Kein `chat_message`-Vollscan in Reducern
+## 12. Kein `chat_message`-Vollscan in Reducern
 
 ### Ist-Zustand
 

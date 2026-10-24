@@ -159,6 +159,20 @@ function createSpacetimeChat() {
     }
   }
 
+  function clearRoomPresence() {
+    if (!conn || !state.connected || !subscribedUrl) return;
+    try {
+      conn.reducers.leaveRoom({});
+    } catch (err) {
+      console.warn('[WepChat] leaveRoom error:', err);
+    }
+    subscribedUrl = '';
+    state.messages = [];
+    state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
+    state.onlineCount = 0;
+    state.roomDisplayName = null;
+  }
+
   function subscribeToUrl(url: string, username: string, nickColorId: number) {
     if (!conn || !state.connected) return;
 
@@ -231,6 +245,7 @@ function createSpacetimeChat() {
     get current() { return state; },
     connect,
     subscribeToUrl,
+    clearRoomPresence,
     sendMessage,
     disconnect,
     loadOlderVisible,

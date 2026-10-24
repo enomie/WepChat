@@ -19,7 +19,8 @@
   },
   "room": {
     "label": "Room:",
-    "noActiveTab": "No active tab"
+    "noActiveTab": "No active tab",
+    "unsupportedShort": "Not supported"
   },
   "info": {
     "title": "Your safety",
@@ -58,6 +59,7 @@
     "justNow": "Just now"
   },
   "messages": {
+    "unsupportedSite": "Chat is not available on local, private, or browser-internal pages.",
     "openTab": "Open a website tab to load the chat.",
     "connectingToServer": "Connecting to server…",
     "empty": "No messages yet. Be the first!",
@@ -65,6 +67,7 @@
   },
   "input": {
     "placeholderNoTab": "No active tab",
+    "placeholderUnsupported": "Page not supported",
     "placeholderConnecting": "Connecting…",
     "placeholderCooldown": "{seconds}s left…",
     "placeholderCompose": "Write a message…",

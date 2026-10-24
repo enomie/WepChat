@@ -117,12 +117,13 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 |----------|----------------|------|
 | **Längenlimits** | URL noch offen | Username **13**, Text **400** ✓, [message-content.md §3.1](message-content.md#31-maximale-länge-zeichen); URL ≤ 2 KB Backlog |
 | **Username normalisieren** | Unicode/Steuerzeichen | `trim()`, Whitelist ([ideas.md](../kickoff/ideas.md)) |
-| **Nur `http`/`https`** | Exotische Schemes | Prefix-Check |
-| **Localhost blocken** | Interne URLs als Raum | `localhost`, `127.0.0.1`, `::1`, private IPs |
+| **Nur `http`/`https`** ✓ | Exotische Schemes | [url-eligibility.md](url-eligibility.md) |
+| **Localhost / private URLs** ✓ | Interne URLs als Raum | [url-eligibility.md](url-eligibility.md) |
+| **`send_message`: URL = Session** ✓ | Spoofing fremder Räume | `session.current_url` muss `url` treffen |
 | **`send_message`: Anzeigename vom Server** ✓ | Impersonation via `username` | `sender_name` aus `user_session`; Raum-Suffixe: [room-pseudonym.md](room-pseudonym.md) |
 | **Text-Policy** | erledigt | [message-content.md](message-content.md) |
 | **Link-/Domain-Limits** (Regex, max. 1 Link) | Affiliate/Phishing-URLs im Text | **Nicht separat**, erledigt über Zeichen-Whitelist (`:` `/` `@` … verboten): [message-content.md §8](message-content.md#8-links-domains-kein-link-regex) |
-| **`chat_message`-Scans in Reducern** | `iter()` skaliert mit Gesamtbestand | Rate-Limit: **`send_rate_state`** ✓; Purge/Echo noch offen, [server-query-patterns.md](server-query-patterns.md), [learnings.md §11](../learnings.md#11-kein-chat_message-vollscan-in-reducern) |
+| **`chat_message`-Scans in Reducern** | `iter()` skaliert mit Gesamtbestand | Rate-Limit: **`send_rate_state`** ✓; Purge/Echo noch offen, [server-query-patterns.md](server-query-patterns.md), [learnings.md §12](../learnings.md#12-kein-chat_message-vollscan-in-reducern) |
 | **B-Tree auf `chat_message`** | Subscriptions / Purge | `url`, `created_at` (Rust `#[index(btree)]`); Purge per Range statt Vollscan |
 
 Retention 72 h: eigene Spezifikation in [Abschnitt 6](#6-nachrichten-retention-72-stunden).
@@ -243,4 +244,4 @@ SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 - `public` Tabellen komplett abschalten
 - **Retention nur im Client** (Subscription-Filter ohne Server-Delete)
 - **Link-Erkennung per Regex** oder **max. N Links pro Nachricht**, **bewusst nicht**; Link-/Domain-Dropping im Chat-Text über [Message Content §8](message-content.md#8-links-domains-kein-link-regex) (Whitelist ohne `:` und `/`, kein URL-Parser).
-- **Identity-basierte Langzeit-Quotas** (z. B. 100 Nachrichten / 72 h pro URL und `ctx.sender`), **verworfen** ([ideas.md](../kickoff/ideas.md)). SpacetimeDB-`Identity` ist an das lokale Token in der Extension gebunden; Angreifer rotieren per `chrome.storage` / neuem Profil, Zähler steht wieder auf 0. Trifft vor allem normale Power-User, kaum Skript-Spam. **Nicht** dasselbe wie [Retention §6](#6-nachrichten-retention-72-stunden) (löscht Nachrichten für **alle** nach 72 h) oder [2/Min §1](#1-nachrichten-rate-limit-2-pro-minute) (kurzes Fenster, gleiche Identity-Schwäche, aber geringe Belastung für Normalnutzer). Ausführlich: [learnings.md §10](../learnings.md#10-identity-limits-und-spam).
+- **Identity-basierte Langzeit-Quotas** (z. B. 100 Nachrichten / 72 h pro URL und `ctx.sender`), **verworfen** ([ideas.md](../kickoff/ideas.md)). SpacetimeDB-`Identity` ist an das lokale Token in der Extension gebunden; Angreifer rotieren per `chrome.storage` / neuem Profil, Zähler steht wieder auf 0. Trifft vor allem normale Power-User, kaum Skript-Spam. **Nicht** dasselbe wie [Retention §6](#6-nachrichten-retention-72-stunden) (löscht Nachrichten für **alle** nach 72 h) oder [2/Min §1](#1-nachrichten-rate-limit-2-pro-minute) (kurzes Fenster, gleiche Identity-Schwäche, aber geringe Belastung für Normalnutzer). Ausführlich: [learnings.md §11](../learnings.md#11-identity-limits-und-spam).

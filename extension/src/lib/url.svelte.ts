@@ -1,19 +1,18 @@
-import { cleanUrl } from './url-utils';
+import { cleanUrl, resolveTabChatUrl, type TabChatUrlState } from './url-utils';
 
-export { cleanUrl };
+export { cleanUrl, type TabChatUrlState };
 
 export function createUrlState() {
-  let url = $state<string>('');
+  let tabState = $state<TabChatUrlState>({ kind: 'none' });
 
   async function updateActiveUrl() {
     if (typeof browser !== 'undefined' && browser.tabs) {
       try {
         const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-        if (tab?.url) {
-          url = cleanUrl(tab.url);
-        }
+        tabState = resolveTabChatUrl(tab?.url);
       } catch (err) {
         console.error('Fehler beim Abrufen des Tabs:', err);
+        tabState = { kind: 'none' };
       }
     }
   }
@@ -28,8 +27,11 @@ export function createUrlState() {
   }
 
   return {
+    get tab() {
+      return tabState;
+    },
     get current() {
-      return url;
+      return tabState.kind === 'ready' ? tabState.url : '';
     },
   };
 }
