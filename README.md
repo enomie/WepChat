@@ -4,6 +4,16 @@
 
 No account. No social login. Open the side panel and talk.
 
+### Try it in Chrome (Developer mode)
+
+A pre-built unpacked extension lives in the repo:
+
+**[extension/.output/chrome-mv3](https://github.com/enomie/WepChat/tree/main/extension/.output/chrome-mv3)**
+
+1. Clone this repository (or download that folder).
+2. Open `chrome://extensions`, enable **Developer mode**.
+3. Click **Load unpacked** and choose the local directory `extension/.output/chrome-mv3`.
+
 ---
 
 ## Why WepChat?
@@ -86,7 +96,7 @@ npm run build        # production build → .output/
 npm run build:firefox
 ```
 
-Load the unpacked extension from `extension/.output/chrome-mv3` (or the Firefox artifact after `build:firefox`).
+Load the unpacked extension from [`extension/.output/chrome-mv3`](https://github.com/enomie/WepChat/tree/main/extension/.output/chrome-mv3) (committed build), or rebuild locally and use the fresh output under `extension/.output/` (Firefox: artifact after `build:firefox`).
 
 ### Backend (publish & regenerate client)
 
