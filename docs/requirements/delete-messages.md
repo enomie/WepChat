@@ -20,7 +20,7 @@ Verwandte Docs:
 | **„Eigene“ Blase / Aktionen** | Über **`sender_identity` ↔ lokale Identity**, nicht `sender_name === username` |
 | **Moderation** | Kein „fremde Nachricht löschen“ für normale User (später optional Admin-Reducer) |
 
-**Warum Identity statt Name?** Pseudonyme sind frei wählbar und können kollidieren. Zwei User können denselben Namen haben; ein User kann den Namen nach dem Senden ändern. Löschen und „meine Blase“ müssen an die **Verbindungs-Identity** gebunden sein.
+**Warum Identity statt Name?** Pseudonyme sind frei wählbar und können kollidieren (geplant: eindeutige Raum-Anzeigenamen, [room-pseudonym.md](room-pseudonym.md)). Ein User kann den Namen nach dem Senden ändern. Löschen und „meine Blase“ müssen an die **Verbindungs-Identity** gebunden sein.
 
 **Anzeige bleibt beim Namen:** In der Blase wird unverändert der zum Sendezeitpunkt gespeicherte `sender_name` gerendert (z. B. `Mustafaaaa`). Nur Layout-Klasse `own`, Papierkorb und Reducer-Aufruf nutzen die Identity.
 

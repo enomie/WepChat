@@ -66,8 +66,9 @@ export function cleanUrl(rawUrl: string): string {
     // 2. Amazon (amazon.de, amazon.com, etc.)
     if (hostname.includes('amazon.')) {
       const asinMatch = parsed.pathname.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i);
-      if (asinMatch) {
-        return `https://${hostname}/dp/${asinMatch[1].toUpperCase()}`;
+      const asin = asinMatch?.[1];
+      if (asin) {
+        return `https://${hostname}/dp/${asin.toUpperCase()}`;
       }
     }
 
@@ -82,8 +83,10 @@ export function cleanUrl(rawUrl: string): string {
     // 4. Reddit
     if (hostname.includes('reddit.com')) {
       const redditMatch = parsed.pathname.match(/\/r\/([^/]+)\/comments\/([^/]+)/);
-      if (redditMatch) {
-        return `https://www.reddit.com/r/${redditMatch[1].toLowerCase()}/comments/${redditMatch[2]}/`;
+      const subreddit = redditMatch?.[1];
+      const postId = redditMatch?.[2];
+      if (subreddit && postId) {
+        return `https://www.reddit.com/r/${subreddit.toLowerCase()}/comments/${postId}/`;
       }
     }
 

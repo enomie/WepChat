@@ -1,6 +1,8 @@
 // Rate limit (send_rate_state) & retention: docs/requirements/security-list.md §1 + §6
 // Message charset: docs/requirements/message-content.md
 // Query patterns: docs/requirements/server-query-patterns.md
+use std::collections::HashSet;
+
 use spacetimedb::{
     reducer, table, Identity, ReducerContext, ScheduleAt, Table, TimeDuration, Timestamp,
 };
@@ -103,6 +105,47 @@ fn normalize_nick_color(raw: u8) -> u8 {
     } else {
         1
     }
+}
+
+fn username_key_ci(s: &str) -> String {
+    s.to_lowercase()
+}
+
+fn username_eq_ci(a: &str, b: &str) -> bool {
+    username_key_ci(a) == username_key_ci(b)
+}
+
+/// Spec: room-pseudonym.md §2.5 — shrink `wish` from the end so `base + suffix` fits in `max_len`.
+fn make_suffixed_display_name(wish: &str, suffix_n: u32, max_len: usize) -> Option<String> {
+    let suffix = suffix_n.to_string();
+    let suffix_len = suffix.chars().count();
+    if suffix_len >= max_len {
+        return None;
+    }
+    let max_base_len = max_len - suffix_len;
+    if max_base_len < 1 {
+        return None;
+    }
+    let base: String = wish.chars().take(max_base_len).collect();
+    if base.is_empty() {
+        return None;
+    }
+    Some(format!("{base}{suffix}"))
+}
+
+/// `taken_lower`: occupied display names in the room (case-insensitive keys).
+fn assign_room_display_name(wish: &str, taken_lower: &HashSet<String>) -> Option<String> {
+    let wish_key = username_key_ci(wish);
+    if !taken_lower.contains(&wish_key) {
+        return Some(wish.to_string());
+    }
+    for n in 2..=999_999u32 {
+        let candidate = make_suffixed_display_name(wish, n, MAX_USERNAME_LEN)?;
+        if !taken_lower.contains(&username_key_ci(&candidate)) {
+            return Some(candidate);
+        }
+    }
+    None
 }
 
 fn nick_color_for_sender(ctx: &ReducerContext, sender: Identity) -> u8 {
@@ -287,9 +330,24 @@ pub fn join_room(ctx: &ReducerContext, url: String, username: String, nick_color
     let color = normalize_nick_color(nick_color);
 
     let sessions = ctx.db.user_session();
+    let mut taken = HashSet::new();
+    for session in sessions.iter() {
+        if session.current_url == clean_url && session.identity != ctx.sender {
+            taken.insert(username_key_ci(&session.username));
+        }
+    }
+
+    let display_name = match assign_room_display_name(&normalized_username, &taken) {
+        Some(name) => name,
+        None => return,
+    };
+    if !within_char_limit(&display_name, MAX_USERNAME_LEN) {
+        return;
+    }
+
     if let Some(mut existing) = sessions.identity().find(&ctx.sender) {
         existing.current_url = clean_url;
-        existing.username = normalized_username;
+        existing.username = display_name;
         existing.nick_color = color;
         existing.joined_at = ctx.timestamp;
         sessions.identity().update(existing);
@@ -297,7 +355,7 @@ pub fn join_room(ctx: &ReducerContext, url: String, username: String, nick_color
         sessions.insert(UserSession {
             identity: ctx.sender,
             current_url: clean_url,
-            username: normalized_username,
+            username: display_name,
             joined_at: ctx.timestamp,
             nick_color: color,
         });
@@ -328,16 +386,15 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         return;
     }
 
-    let clean_username = username.trim().to_string();
-    if clean_username.is_empty() || !text_is_allowed(&clean_username) {
-        return;
-    }
-    let normalized_username = normalize_allowed_text(&clean_username);
-    if normalized_username.is_empty() || !within_char_limit(&normalized_username, MAX_USERNAME_LEN) {
-        return;
-    }
+    let _ = username;
 
     ensure_purge_job(ctx);
+
+    let sessions = ctx.db.user_session();
+    let session = sessions.identity().find(&ctx.sender);
+    let Some(session) = session else {
+        return;
+    };
 
     if is_rate_limited(ctx, ctx.sender) {
         return;
@@ -349,7 +406,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         id: 0,
         url: clean_url,
         sender_identity: ctx.sender,
-        sender_name: normalized_username,
+        sender_name: session.username.clone(),
         text: normalized_text,
         created_at: ctx.timestamp,
         sender_nick_color,
@@ -430,5 +487,68 @@ mod rate_window_tests {
         );
         assert_eq!(a, Timestamp::UNIX_EPOCH);
         assert_eq!(b, now);
+    }
+}
+
+#[cfg(test)]
+mod room_pseudonym_tests {
+    use super::*;
+
+    fn taken(names: &[&str]) -> HashSet<String> {
+        names.iter().map(|n| username_key_ci(n)).collect()
+    }
+
+    #[test]
+    fn assign_free_wish_unchanged() {
+        let got = assign_room_display_name("Kurt", &taken(&[])).unwrap();
+        assert_eq!(got, "Kurt");
+    }
+
+    #[test]
+    fn assign_second_kurt_gets_suffix_2() {
+        let got = assign_room_display_name("Kurt", &taken(&["Kurt"])).unwrap();
+        assert_eq!(got, "Kurt2");
+    }
+
+    #[test]
+    fn assign_third_kurt_gets_suffix_3() {
+        let got = assign_room_display_name("Kurt", &taken(&["Kurt", "Kurt2"])).unwrap();
+        assert_eq!(got, "Kurt3");
+    }
+
+    #[test]
+    fn assign_case_insensitive_collision() {
+        let got = assign_room_display_name("kurt", &taken(&["Kurt"])).unwrap();
+        assert_eq!(got, "kurt2");
+    }
+
+    #[test]
+    fn assign_literal_kurt2_when_free() {
+        let got = assign_room_display_name("Kurt2", &taken(&[])).unwrap();
+        assert_eq!(got, "Kurt2");
+    }
+
+    #[test]
+    fn username_eq_ci_works() {
+        assert!(username_eq_ci("Kurt", "kurt"));
+        assert!(!username_eq_ci("Kurt", "Kurt2"));
+    }
+
+    #[test]
+    fn suffixed_name_truncates_base_for_length() {
+        let long = "Abcdefghijklm";
+        assert_eq!(long.chars().count(), 13);
+        let got = make_suffixed_display_name(long, 2, MAX_USERNAME_LEN).unwrap();
+        assert_eq!(got.chars().count(), 13);
+        assert!(got.ends_with('2'));
+        assert_eq!(got, "Abcdefghijkl2");
+    }
+
+    #[test]
+    fn suffixed_name_two_digit_suffix() {
+        let wish = "Abcdefghijk";
+        let got = make_suffixed_display_name(wish, 10, MAX_USERNAME_LEN).unwrap();
+        assert_eq!(got, "Abcdefghijk10");
+        assert_eq!(got.chars().count(), 13);
     }
 }

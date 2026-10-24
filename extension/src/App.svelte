@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { urlState } from './lib/url.svelte';
   import { profileState } from './lib/profile.svelte';
-  import { spacetimeChat } from './lib/spacetime.svelte';
+  import { isOwnMessage, spacetimeChat } from './lib/spacetime.svelte';
   import { rateLimitState } from './lib/rate-limit.svelte';
   import {
     filterMessageInput,
@@ -19,12 +19,14 @@
   import { tick } from 'svelte';
   import profileIcon from './assets/icons/profile.svg?raw';
   import infoIcon from './assets/icons/info.svg?raw';
-  import { connectionErrorMessage, t, tPlural } from './lib/i18n';
+  import { connectionErrorMessage, locale, t, tPlural } from './lib/i18n';
+  import { formatMessageAgeIso, formatMessageAgeLabel } from './lib/message-age-label';
   import {
     RATE_LIMIT_MAX_SENDS,
     RATE_LIMIT_WINDOW_MS,
   } from './lib/rate-limit.svelte';
   import { NICK_COLORS, nickColorStyles, normalizeNickColorId } from './lib/nick-colors';
+  import { WEPCHAT_GREEN } from './lib/brand-colors';
 
   const rateLimitWindowMinutes = RATE_LIMIT_WINDOW_MS / 60_000;
 
@@ -34,13 +36,18 @@
   let messagesContainer: HTMLDivElement | null = null;
   let initialScrollDoneForUrl = $state<string | null>(null);
   let lastMessageCount = $state(0);
+  let messageAgeNowMs = $state(Date.now());
 
   // Connect once when the side panel loads
   onMount(() => {
     spacetimeChat.connect();
     const tickId = setInterval(() => rateLimitState.bumpTick(), 1000);
+    const ageTickId = setInterval(() => {
+      messageAgeNowMs = Date.now();
+    }, 30_000);
     return () => {
       clearInterval(tickId);
+      clearInterval(ageTickId);
       spacetimeChat.disconnect();
     };
   });
@@ -175,7 +182,7 @@
   );
 </script>
 
-<main class="chat-container">
+<main class="chat-container" style="--wepchat-green: {WEPCHAT_GREEN}">
   <!-- Header -->
   <header>
     <div class="status">
@@ -243,6 +250,7 @@
         <li>{t('info.faq3')}</li>
         <li>{t('info.faq4')}</li>
         <li>{t('info.faq5')}</li>
+        <li>{t('info.faq6')}</li>
       </ul>
       <p class="info-contact">{t('info.contact')}</p>
     </div>
@@ -258,11 +266,9 @@
         value={profileState.current.username}
         oninput={handleUsernameInput}
       />
-      {#if spacetimeChat.current.identity}
-        <p class="identity">
-          {t('settings.identityPrefix', {
-            id: spacetimeChat.current.identity.slice(0, 16),
-          })}
+      {#if spacetimeChat.current.connected && urlState.current && spacetimeChat.current.roomDisplayName && spacetimeChat.current.roomDisplayName !== profileState.current.username}
+        <p class="room-display-hint">
+          {t('settings.roomDisplayName', { name: spacetimeChat.current.roomDisplayName })}
         </p>
       {/if}
       <span id="nick-color-label" class="color-label">{t('settings.colorLabel')}</span>
@@ -311,11 +317,20 @@
       {/if}
       {#each visibleMessages as msg (msg.id)}
         {@const nickStyles = nickColorStyles(normalizeNickColorId(msg.senderNickColor))}
+        {@const ageLabel = formatMessageAgeLabel(
+          msg.createdAt,
+          locale,
+          messageAgeNowMs,
+          t('messageAge.justNow')
+        )}
         <div
-          class="bubble {msg.senderName === profileState.current.username ? 'own' : ''}"
+          class="bubble {isOwnMessage(msg, spacetimeChat.current.identity) ? 'own' : ''}"
           style:background={nickStyles.bubbleBackground}
         >
-          <span class="sender" style:color={nickStyles.senderColor}>{msg.senderName}</span>
+          <div class="bubble-meta">
+            <span class="sender" style:color={nickStyles.senderColor}>{msg.senderName}</span>
+            <time class="message-age" datetime={formatMessageAgeIso(msg.createdAt)}>{ageLabel}</time>
+          </div>
           <span class="text">{msg.text}</span>
         </div>
       {/each}
@@ -390,7 +405,10 @@
   .dot {
     width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
   }
-  .dot.online  { background: #22c55e; box-shadow: 0 0 5px #22c55e88; }
+  .dot.online {
+    background: var(--wepchat-green);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--wepchat-green) 53%, transparent);
+  }
   .dot.offline { background: #f59e0b; box-shadow: 0 0 5px #f59e0b88; }
 
   .err { color: #ef4444; }
@@ -472,8 +490,8 @@
 
   .settings-panel {
     padding: 10px 14px;
-    background: #fefce8;
-    border-bottom: 1px solid #fef08a;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
     font-size: 0.8rem;
     flex-shrink: 0;
   }
@@ -487,7 +505,12 @@
     box-sizing: border-box;
     font-size: 0.82rem;
   }
-  .identity { margin: 6px 0 0; font-size: 0.7rem; color: #854d0e; }
+  .room-display-hint {
+    margin: 6px 0 0;
+    font-size: 0.75rem;
+    color: #64748b;
+    line-height: 1.35;
+  }
   .color-label {
     display: block;
     margin-top: 10px;
@@ -495,8 +518,8 @@
     color: #64748b;
   }
   .color-swatches {
-    display: grid;
-    grid-template-columns: repeat(3, 32px);
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 6px;
   }
@@ -565,11 +588,21 @@
   .bubble.own {
     align-self: flex-end;
   }
+  .bubble-meta {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 2px;
+  }
   .sender {
-    display: block;
     font-size: 0.7rem;
     font-weight: 600;
-    margin-bottom: 2px;
+  }
+  .message-age {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: #94a3b8;
   }
   .text { font-size: 0.84rem; line-height: 1.35; }
 

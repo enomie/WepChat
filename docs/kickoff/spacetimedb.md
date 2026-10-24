@@ -137,6 +137,8 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 
 ### Phase 4: Backend publizieren & TypeScript-Bindings generieren
 
+> **Release-Checkliste (Store + Deploy):** [publish-guide.md](../infos/publish-guide.md)
+
 1. **Backend bauen und publizieren:**
    ```bash
    cd /Users/johann/MyBrew/WepChat/server

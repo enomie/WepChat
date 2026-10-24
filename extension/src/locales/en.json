@@ -34,12 +34,13 @@
     "faq2": "Browser cache cleared? Your profile and nickname stay saved.",
     "faq3": "Extension reinstalled or app data reset? You start completely fresh with a new anonymous ID.",
     "faq4": "Incognito mode? Temporary session only, resets when closed.",
-    "faq5": "Messages expire: All chat messages are automatically deleted after 72 hours.",
+    "faq5": "All chat messages are automatically deleted after 72 hours.",
+    "faq6": "Encryption? Yes. Your browser connects to our servers over TLS. It is not a secret chat: anyone in the same room can read messages; they stay on the server until automatic deletion.",
     "contact": "Contact: wepchat@proton.me"
   },
   "settings": {
     "pseudonymLabel": "Pseudonym:",
-    "identityPrefix": "ID: {id}…",
+    "roomDisplayName": "In this room you appear as: {name}",
     "colorLabel": "Color:",
     "colors": {
       "blue": "Blue",
@@ -52,6 +53,9 @@
       "brown": "Brown",
       "turquoise": "Turquoise"
     }
+  },
+  "messageAge": {
+    "justNow": "Just now"
   },
   "messages": {
     "openTab": "Open a website tab to load the chat.",

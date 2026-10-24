@@ -1,0 +1,25 @@
+---
+description: WepChat release/deploy workflow (SpacetimeDB, extension build, Chrome store)
+alwaysApply: true
+---
+
+# Release and deploy (WepChat)
+
+**Canonical guide:** [docs/infos/publish-guide.md](docs/infos/publish-guide.md). Follow it for any publish, deploy, store ZIP, or “make live” request.
+
+## Quick reference
+
+| Task | Where | Command |
+|------|-------|---------|
+| Deploy server logic | `server/` | `cargo test` then `spacetime publish wepchat -y` |
+| Regenerate TS client | `extension/` | `npm run codegen:stdb` **only** if tables or reducer names/args changed |
+| Extension QA + ZIP | `extension/` | `npm run publish:chrome` (tests, locales, icons, build, zip) |
+| Typecheck only | `extension/` | `npm run check` (svelte-check) |
+
+- Live module: `wepchat` on `maincloud.spacetimedb.com`. Dashboard: https://spacetimedb.com/wepchat
+- If `spacetime` is not in PATH, use `~/.local/bin/spacetime` or `export PATH="$HOME/.local/bin:$PATH"`.
+- After **logic-only** server deploy, users need a reloaded extension, not necessarily a new store ZIP.
+- Bump **version** in both `extension/package.json` and `extension/wxt.config.ts` before a Chrome Web Store upload.
+- Do not put SpacetimeDB developer login tokens in the extension repo or extension bundle.
+
+More detail: [docs/kickoff/spacetimedb.md](docs/kickoff/spacetimedb.md), [docs/requirements/security.md](docs/requirements/security.md).

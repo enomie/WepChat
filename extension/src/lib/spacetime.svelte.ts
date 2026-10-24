@@ -25,7 +25,13 @@ export interface ChatState {
   messages: ChatMessage[];
   visibleLimit: number;
   identity: string | null;
+  roomDisplayName: string | null;
   error: ChatConnectionError | null;
+}
+
+export function isOwnMessage(msg: ChatMessage, identityHex: string | null): boolean {
+  if (!identityHex) return false;
+  return msg.senderIdentity.toHexString() === identityHex;
 }
 
 function createSpacetimeChat() {
@@ -38,6 +44,7 @@ function createSpacetimeChat() {
     messages: [],
     visibleLimit: DEFAULT_VISIBLE_LIMIT,
     identity: null,
+    roomDisplayName: null,
     error: null,
   });
 
@@ -55,6 +62,7 @@ function createSpacetimeChat() {
           state.connected = true;
           state.identity = identity.toHexString();
           state.error = null;
+          syncOwnRoomDisplayName();
         })
         .onDisconnect((_connection, _error) => {
           console.warn('[WepChat] Disconnected.');
@@ -85,13 +93,35 @@ function createSpacetimeChat() {
         }
       });
 
-      conn.db.user_session.onInsert(recountOnline);
-      conn.db.user_session.onUpdate(recountOnline);
-      conn.db.user_session.onDelete(recountOnline);
+      conn.db.user_session.onInsert(onUserSessionChange);
+      conn.db.user_session.onUpdate(onUserSessionChange);
+      conn.db.user_session.onDelete(onUserSessionChange);
     } catch (err) {
       console.error('[WepChat] Client build error:', err);
       state.error = 'build';
     }
+  }
+
+  function syncOwnRoomDisplayName() {
+    if (!conn || !subscribedUrl || !state.identity) {
+      state.roomDisplayName = null;
+      return;
+    }
+    for (const session of conn.db.user_session.iter()) {
+      if (
+        session.currentUrl === subscribedUrl &&
+        session.identity.toHexString() === state.identity
+      ) {
+        state.roomDisplayName = session.username;
+        return;
+      }
+    }
+    state.roomDisplayName = null;
+  }
+
+  function onUserSessionChange() {
+    recountOnline();
+    syncOwnRoomDisplayName();
   }
 
   function recountOnline() {
@@ -103,13 +133,13 @@ function createSpacetimeChat() {
     state.onlineCount = count;
 
     // Badge synchronisieren, wenn Sidepanel offen ist
-    if (typeof chrome !== 'undefined' && chrome.action) {
-      chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+    if (browser.action) {
+      browser.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
         if (tab?.id) {
           const text = count > 1 ? (count > 999 ? '99+' : String(count)) : '';
-          chrome.action.setBadgeText({ text, tabId: tab.id }).catch(() => {});
+          browser.action.setBadgeText({ text, tabId: tab.id }).catch(() => {});
           if (text) {
-            chrome.action.setBadgeBackgroundColor({ color: '#2563EB', tabId: tab.id }).catch(() => {});
+            browser.action.setBadgeBackgroundColor({ color: '#2563EB', tabId: tab.id }).catch(() => {});
           }
         }
       }).catch(() => {});
@@ -137,6 +167,7 @@ function createSpacetimeChat() {
       state.messages = [];
       state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
       state.onlineCount = 0;
+      state.roomDisplayName = null;
 
       conn
         .subscriptionBuilder()
@@ -147,7 +178,7 @@ function createSpacetimeChat() {
             if (msg.url === url) msgs.push(msg);
           }
           state.messages = msgs.sort((a, b) => Number(a.id) - Number(b.id));
-          recountOnline();
+          onUserSessionChange();
         })
         .subscribe([
           `SELECT * FROM chat_message WHERE url = '${url}'`,
@@ -182,6 +213,7 @@ function createSpacetimeChat() {
     state.connected = false;
     state.messages = [];
     state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
+    state.roomDisplayName = null;
     subscribedUrl = '';
   }
 

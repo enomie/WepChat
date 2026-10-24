@@ -119,7 +119,7 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 | **Username normalisieren** | Unicode/Steuerzeichen | `trim()`, Whitelist ([ideas.md](../kickoff/ideas.md)) |
 | **Nur `http`/`https`** | Exotische Schemes | Prefix-Check |
 | **Localhost blocken** | Interne URLs als Raum | `localhost`, `127.0.0.1`, `::1`, private IPs |
-| **`send_message`: Anzeigename vom Server** | Impersonation via `username` | `sender_name` aus `user_session` für `ctx.sender` |
+| **`send_message`: Anzeigename vom Server** ✓ | Impersonation via `username` | `sender_name` aus `user_session`; Raum-Suffixe: [room-pseudonym.md](room-pseudonym.md) |
 | **Text-Policy** | erledigt | [message-content.md](message-content.md) |
 | **Link-/Domain-Limits** (Regex, max. 1 Link) | Affiliate/Phishing-URLs im Text | **Nicht separat**, erledigt über Zeichen-Whitelist (`:` `/` `@` … verboten): [message-content.md §8](message-content.md#8-links-domains-kein-link-regex) |
 | **`chat_message`-Scans in Reducern** | `iter()` skaliert mit Gesamtbestand | Rate-Limit: **`send_rate_state`** ✓; Purge/Echo noch offen, [server-query-patterns.md](server-query-patterns.md), [learnings.md §11](../learnings.md#11-kein-chat_message-vollscan-in-reducern) |

@@ -55,11 +55,11 @@ function formatBadgeText(count: number): string {
  * Aktualisiert den Badge für einen spezifischen Tab
  */
 async function updateBadgeForTab(tabId: number, rawUrl?: string) {
-  if (!tabId || tabId === chrome.tabs.TAB_ID_NONE) return;
+  if (!tabId || tabId === browser.tabs.TAB_ID_NONE) return;
 
   if (!rawUrl) {
     try {
-      const tab = await chrome.tabs.get(tabId);
+      const tab = await browser.tabs.get(tabId);
       rawUrl = tab?.url;
     } catch {
       return;
@@ -68,7 +68,7 @@ async function updateBadgeForTab(tabId: number, rawUrl?: string) {
 
   const url = cleanUrl(rawUrl || '');
   if (!url) {
-    chrome.action.setBadgeText({ text: '', tabId }).catch(() => {});
+    browser.action.setBadgeText({ text: '', tabId }).catch(() => {});
     return;
   }
 
@@ -76,37 +76,36 @@ async function updateBadgeForTab(tabId: number, rawUrl?: string) {
   const badgeText = formatBadgeText(count);
 
   try {
-    await chrome.action.setBadgeText({ text: badgeText, tabId });
+    await browser.action.setBadgeText({ text: badgeText, tabId });
     if (badgeText) {
-      await chrome.action.setBadgeBackgroundColor({ color: BADGE_COLOR, tabId });
+      await browser.action.setBadgeBackgroundColor({ color: BADGE_COLOR, tabId });
     }
-  } catch (err) {
+  } catch {
     // Tab eventuell schon geschlossen
   }
 }
 
 export default defineBackground(() => {
-  // 1. Öffnet das Sidepanel bei Klick auf das Extension-Icon
-  if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
-    chrome.sidePanel
+  // Chrome-only: Side Panel (Firefox nutzt sidebar_action im Manifest)
+  const sidePanel = chrome.sidePanel;
+  if (sidePanel?.setPanelBehavior) {
+    sidePanel
       .setPanelBehavior({ openPanelOnActionClick: true })
       .catch((error: unknown) => console.error('Fehler bei setPanelBehavior:', error));
   }
 
   // Fallback: Falls setPanelBehavior nicht sofort greift
-  chrome.action.onClicked.addListener(async (tab) => {
-    if (tab.windowId && chrome.sidePanel && chrome.sidePanel.open) {
-      await chrome.sidePanel.open({ windowId: tab.windowId }).catch(console.error);
+  browser.action.onClicked.addListener(async (tab) => {
+    if (tab.windowId && sidePanel?.open) {
+      await sidePanel.open({ windowId: tab.windowId }).catch(console.error);
     }
   });
 
-  // 2. Tab-Wechsel: Nutzer aktiviert einen anderen Tab
-  chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  browser.tabs.onActivated.addListener(async (activeInfo) => {
     await updateBadgeForTab(activeInfo.tabId);
   });
 
-  // 3. Tab-Update: URL hat sich im Tab geändert oder Seite ist fertig geladen
-  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (changeInfo.url || changeInfo.status === 'complete') {
       await updateBadgeForTab(tabId, tab.url);
     }

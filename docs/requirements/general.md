@@ -40,6 +40,7 @@
 * **Unabhängig von Drittanbietern:** Keine Pflicht zur Registrierung via Google oder Social Logins.
 * **Lokale Datenspeicherung:** Profildaten (Pseudonym, Nick-Farbe) liegen im lokalen Speicher des Browsers (`chrome.storage.local`).
 * **Frei anpassbar:** Automatische Generierung eines zufälligen Pseudonyms (z. B. `Anon8392`), das der User im Plugin-Interface jederzeit überschreiben kann.
+* **Eindeutigkeit im Raum (geplant):** Gleicher Wunschname auf derselben URL → Server vergibt Suffixe (`Kurt`, `Kurt2`, …), [room-pseudonym.md](room-pseudonym.md).
 * **Nick-Farbe:** Eine von **9 festen Palettenfarben** (Default Blau), Swatch-Picker in den Einstellungen; Sync über `join_room`, Snapshot pro Nachricht auf dem Server, [nickname-appearance.md](nickname-appearance.md).
 * **Anonymität:** Anonyme Identifikation gegenüber dem Server über zufällig generierte Verbindungsschlüssel (SpacetimeDB Identity).
 * **Sicherheit & Secrets:** Welche Zugangsdaten in die Extension dürfen (und welche nicht), siehe [security.md](security.md).
@@ -59,7 +60,7 @@
 
 ### 5. Was fehlt noch? / Mögliche Zukunftsanforderungen ("Was noch?")
 
-* **Historie & Inaktivität:** Nachrichten werden nach **72 h** serverseitig gelöscht, [security-list.md](security-list.md#6-nachrichten-retention-72-stunden). **Sidepanel:** Client-Fenster (neueste 100, „Ältere laden“), [message-history-pagination.md](message-history-pagination.md).
+* **Historie & Inaktivität:** Nachrichten werden nach **72 h** serverseitig gelöscht, [security-list.md](security-list.md#6-nachrichten-retention-72-stunden). **Sidepanel:** Client-Fenster (neueste 100, „Ältere laden“), [message-history-pagination.md](message-history-pagination.md). **Zeitlabel** neben dem Pseudonym („Gerade eben“ bis 1 Min, danach relativ), [message-age-label.md](message-age-label.md).
 * **Moderation & Safety:** Bad-Word-Filter, User-Muting oder Meldefunktionen für unangemessene Nachrichten im Backend.
 * **Benachrichtigungen:** Unaufdringliche Indikatoren (z. B. kleiner Badge am Extension-Icon), wenn auf der aktuellen Seite aktiv gechattet wird.
 * **Domain-weite Räume (Optionaler Tab):** Neben dem Raum für die *exakte URL* könnte ein zweiter Tab für die gesamte Domain existieren (z. B. Chat für ganz `amazon.de`).

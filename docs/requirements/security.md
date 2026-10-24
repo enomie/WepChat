@@ -77,7 +77,29 @@ Schutzmodell bei SpacetimeDB/WepChat:
 
 ---
 
-## 4. Aktuelles Datenmodell & Sichtbarkeit
+## 4. Transportverschlüsselung (TLS)
+
+Alle Client-Verbindungen von WepChat zum gehosteten Backend laufen über **TLS**:
+
+| Pfad | Protokoll | Code |
+|------|-----------|------|
+| Sidepanel (Chat, Presence, Reducer) | `wss://` (WebSocket über TLS) | `extension/src/lib/spacetime.svelte.ts` |
+| Background (Live-Badge, SQL-Count) | `https://` | `extension/src/entrypoints/background.ts` |
+| Entwickler-Publish (`spacetime publish`) | HTTPS der CLI zum Cloud-Host | nur lokal/CI |
+
+**Was TLS leistet:** Schutz **auf dem Transportweg** (WLAN, ISP, Mitläufer im Netz). Payload ist für Dritte unterwegs nicht im Klartext lesbar.
+
+**Was TLS nicht leistet:**
+
+- **Kein Ende-zu-Ende-Chat** zwischen Nutzern. Nachrichten sind für jeden im gleichen URL-Raum lesbar (öffentliche Tabellen, siehe Abschnitt 5).
+- **Kein Geheimnis vor dem Betreiber** des Backends (Speicher, Betrieb, Dashboard).
+- Das WebSocket-**Reconnect-Token** sichert nur die **Identity-Wiedererkennung**, nicht Vertraulichkeit der Inhalte.
+
+**Nutzer-FAQ (ohne Backend-Anbieter):** Sidepanel „Info & Datenschutz“, Locale-Key `info.faq6` in `extension/src/locales/`.
+
+---
+
+## 5. Aktuelles Datenmodell & Sichtbarkeit
 
 In `server/src/lib.rs` sind beide Kern-Tabellen **`public`**:
 
@@ -96,7 +118,7 @@ Admin-Operationen (Retention löschen, Moderation, Bezahl-Features) müssen **ei
 
 ---
 
-## 5. HTTP-SQL im Background (Live Badge)
+## 6. HTTP-SQL im Background (Live Badge)
 
 Für den tab-spezifischen Badge fragt der **Service Worker** ohne separates Secret die öffentliche SQL-API ab:
 
@@ -120,7 +142,7 @@ Details: [live_badge.md](live_badge.md).
 
 ---
 
-## 6. Datenschutz im Client (keine Secrets, aber sensible UX)
+## 7. Datenschutz im Client (keine Secrets, aber sensible UX)
 
 | Maßnahme | Ort | Zweck |
 |----------|-----|--------|
@@ -134,7 +156,7 @@ Details: [live_badge.md](live_badge.md).
 
 ---
 
-## 7. Extension & Supply Chain
+## 8. Extension & Supply Chain
 
 - **CSP / `unsafe-eval`:** SpacetimeDB-SDK wurde für MV3 gepatcht (`extension/scripts/patch-spacetimedb.js`, `postinstall`), siehe [learnings.md](../learnings.md).
 - **Codegen:** Nach Schema-Änderungen `npm run codegen:stdb` in `extension/` ([learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor)).
@@ -143,7 +165,7 @@ Details: [live_badge.md](live_badge.md).
 
 ---
 
-## 8. Empfohlene Härtung (Roadmap)
+## 9. Empfohlene Härtung (Roadmap)
 
 Priorität aus Produktrisiko:
 
@@ -157,7 +179,7 @@ Priorität aus Produktrisiko:
 
 ---
 
-## 9. Checkliste
+## 10. Checkliste
 
 ### Vor jedem Release
 
@@ -184,7 +206,10 @@ Priorität aus Produktrisiko:
 
 ---
 
-## 10. FAQ
+## 11. FAQ (Entwickler)
+
+**„Sind Nachrichten verschlüsselt?“**  
+**Transport:** ja, über `wss://` und `https://` (TLS). **Inhalte:** kein E2E-Geheimchat; öffentliche Räume und Server-Speicher bis Retention (Abschnitt 4 und 5).
 
 **„Kann jeder mit meiner Extension in meine DB?“**  
 Als **Chat-Client** ja, genau so wie deine Nutzer. Als **DB-Owner** (publish/löschen) nur mit **deinem** CLI-/Account-Login, nicht aus der Extension.

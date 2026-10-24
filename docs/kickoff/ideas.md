@@ -10,3 +10,4 @@ Nur Sammlung von Ideen, keine feste Roadmap.
 6. **Raum-Limit 100/72h pro Identity**, **verworfen.** Idee: max. 100 Nachrichten pro URL und `ctx.sender` im gleitenden 72‑h‑Fenster. Nicht umgesetzt: Identity hängt am lokalen Browser-Token, Rotation (Storage/Profil) setzt Zähler zurück; trifft vor allem Power-User, nicht Bots. Begründung: [security-list.md §7](../requirements/security-list.md#7-bewusst-nicht-ziel), [learnings.md §10](../learnings.md#10-identity-limits-und-spam).
 7. **Chat-Verlauf paginieren**, umgesetzt (Client-Slice): [message-history-pagination.md](../requirements/message-history-pagination.md).
 8. **Nickname-Farbe / Erscheinungsbild**, umgesetzt: [nickname-appearance.md](../requirements/nickname-appearance.md).
+9. **Zeitlabel neben Pseudonym** („Gerade eben“ bis 1 Min, danach relativ), umgesetzt: [message-age-label.md](../requirements/message-age-label.md).
