@@ -4,6 +4,7 @@
   import { profileState } from './lib/profile.svelte';
   import { spacetimeChat } from './lib/spacetime.svelte';
   import { rateLimitState } from './lib/rate-limit.svelte';
+  import { filterMessageInput, prepareMessageForSend } from './lib/message-text-policy';
 
   let newMessage = $state('');
   let showSettings = $state(false);
@@ -46,14 +47,37 @@
     }
   });
 
+  function handleMessageInput(e: Event) {
+    const el = e.currentTarget as HTMLInputElement;
+    newMessage = filterMessageInput(el.value);
+  }
+
+  function handleMessagePaste() {
+    queueMicrotask(() => {
+      newMessage = filterMessageInput(newMessage);
+    });
+  }
+
+  function handleUsernameInput(e: Event) {
+    const el = e.currentTarget as HTMLInputElement;
+    const filtered = filterMessageInput(el.value);
+    el.value = filtered;
+    profileState.setUsername(filtered);
+  }
+
   function handleSend() {
     const url = urlState.current;
     const username = profileState.current.username;
-    if (!newMessage.trim() || !url || !spacetimeChat.current.connected) return;
+    const text = prepareMessageForSend(newMessage);
+    if (!text || !url || !spacetimeChat.current.connected) return;
     if (!rateLimitState.canSend()) return;
-    spacetimeChat.sendMessage(url, username, newMessage.trim());
+    spacetimeChat.sendMessage(url, username, text);
     newMessage = '';
   }
+
+  const canSendMessage = $derived(
+    prepareMessageForSend(newMessage).length > 0 && !rateLimited
+  );
 </script>
 
 <main class="chat-container">
@@ -91,7 +115,7 @@
         id="username-input"
         type="text"
         value={profileState.current.username}
-        onchange={(e) => profileState.setUsername(e.currentTarget.value)}
+        oninput={handleUsernameInput}
       />
       {#if spacetimeChat.current.identity}
         <p class="identity">ID: {spacetimeChat.current.identity.slice(0, 16)}…</p>
@@ -128,7 +152,9 @@
       <input
         type="text"
         class:muted={rateLimited}
-        bind:value={newMessage}
+        value={newMessage}
+        oninput={handleMessageInput}
+        onpaste={handleMessagePaste}
         placeholder={!urlState.current
           ? 'Kein Tab aktiv'
           : !spacetimeChat.current.connected
@@ -142,7 +168,7 @@
       <button
         onclick={handleSend}
         class:muted={rateLimited}
-        disabled={!newMessage.trim() || !spacetimeChat.current.connected || !urlState.current || rateLimited}
+        disabled={!canSendMessage || !spacetimeChat.current.connected || !urlState.current}
       >
         {rateLimited ? `${cooldownSecs}s` : 'Senden'}
       </button>

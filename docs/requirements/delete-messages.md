@@ -6,6 +6,7 @@ Verwandte Docs:
 
 - [security.md](security.md) — `sender_name` ist nur Anzeige; vertrauenswürdig ist `sender_identity`
 - [security-list.md](security-list.md) — Rate-Limit, Retention 72 h (Scheduler-`delete_message`)
+- [message-content.md](message-content.md) — erlaubte Zeichen in `text` / Pseudonym (bereits live)
 - [general.md](general.md) — Pseudonym lokal, Identity serverseitig
 
 ---

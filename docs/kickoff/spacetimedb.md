@@ -172,6 +172,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 * **Chrome Extension CSP (`unsafe-eval`)**: SpacetimeDB generiert intern dynamische Serializer via `new Function(...)`. Dies wird im Build über das Patch-Skript `scripts/patch-spacetimedb.js` automatisch auf statische Interpreter umgeschrieben.
 * **Reducer-Aufruf-Konvention**: Reducer werden im TypeScript SDK in **CamelCase** aufgerufen und erwarten ein **Parameter-Objekt** (z. B. `conn.reducers.joinRoom({ url, username })`).
 * **Codegen / Index-`accessor`:** immer `npm run codegen:stdb` in `extension/` — [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).
+* **Nachrichten-Inhalt:** `send_message` und `join_room` validieren erlaubte Zeichen — [message-content.md](../requirements/message-content.md).
 * Detaillierte Dokumentation dazu siehe: [learnings.md](../learnings.md).
 
 ---

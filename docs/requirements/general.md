@@ -39,9 +39,10 @@
 
 * **Unabhängig von Drittanbietern:** Keine Pflicht zur Registrierung via Google oder Social Logins.
 * **Lokale Datenspeicherung:** Profildaten (Pseudonym, Farb-Tag/Avatar) liegen ausschließlich im lokalen Speicher des Browsers (`chrome.storage.local`).
-* **Frei anpassbar:** Automatische Generierung eines zufälligen Pseudonyms (z. B. `Anon_8392`), das der User im Plugin-Interface jederzeit überschreiben kann.
+* **Frei anpassbar:** Automatische Generierung eines zufälligen Pseudonyms (z. B. `Anon8392`), das der User im Plugin-Interface jederzeit überschreiben kann.
 * **Anonymität:** Anonyme Identifikation gegenüber dem Server über zufällig generierte Verbindungsschlüssel (SpacetimeDB Identity).
 * **Sicherheit & Secrets:** Welche Zugangsdaten in die Extension dürfen (und welche nicht) — siehe [security.md](security.md).
+* **Chat & Pseudonym — erlaubte Zeichen:** Buchstaben (inkl. Umlaute), Ziffern, Leerzeichen, nur `,` `.` `-`; Filter beim Tippen + Server — [message-content.md](message-content.md).
 
 ---
 
@@ -56,7 +57,7 @@
 
 ### 5. Was fehlt noch? / Mögliche Zukunftsanforderungen ("Was noch?")
 
-* **Historie & Inaktivität:** Sollen Chat-Nachrichten für immer auf der URL gespeichert bleiben oder nach X Stunden/Tagen verfallen (Ephemeral Chat)?
+* **Historie & Inaktivität:** Nachrichten werden nach **72 h** serverseitig gelöscht — [security-list.md](security-list.md#6-nachrichten-retention-72-stunden).
 * **Moderation & Safety:** Bad-Word-Filter, User-Muting oder Meldefunktionen für unangemessene Nachrichten im Backend.
 * **Benachrichtigungen:** Unaufdringliche Indikatoren (z. B. kleiner Badge am Extension-Icon), wenn auf der aktuellen Seite aktiv gechattet wird.
 * **Domain-weite Räume (Optionaler Tab):** Neben dem Raum für die *exakte URL* könnte ein zweiter Tab für die gesamte Domain existieren (z. B. Chat für ganz `amazon.de`).

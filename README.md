@@ -118,6 +118,7 @@ The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module
 - [Concept & UX](docs/kickoff/konzept.md)
 - [Architecture requirements](docs/requirements/architektur.md)
 - [Security & secrets](docs/requirements/security.md)
+- [Message content (allowed characters)](docs/requirements/message-content.md)
 - [Setup walkthrough](docs/kickoff/setup.md)
 - [Go-live checklist](docs/kickoff/Live-Inbetriebnahme.md)
 
@@ -128,6 +129,7 @@ The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module
 - **No mandatory registration** — identity comes from SpacetimeDB’s connection identity; display name is a local pseudonym.
 - **Profile data** stays in `chrome.storage.local` (or Firefox equivalent).
 - **URLs are normalized** before room lookup (tracking params removed) to reduce fragmentation and accidental leakage of session tokens in query strings.
+- **Chat text & display names** are limited to letters (incl. German umlauts), digits, spaces, and `,` `.` `-` — enforced in the extension and on the server: [message-content.md](docs/requirements/message-content.md).
 - **Secrets & threat model** (CLI vs. client, public tables, what not to put in the extension): [docs/requirements/security.md](docs/requirements/security.md)
 
 ---
@@ -137,7 +139,8 @@ The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module
 - [x] WXT + Svelte 5 side panel shell
 - [x] SpacetimeDB schema: presence + chat reducers
 - [x] Extension ↔ Maincloud integration
-- [ ] Store listing polish, moderation, message retention policy
+- [x] Message rate limit, 72h retention, allowed-character filter
+- [ ] Store listing polish, moderation, user delete own messages
 - [ ] Mobile strategy (PWA / share-sheet) — see [requirements](docs/requirements/general.md)
 
 ---

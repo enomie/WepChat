@@ -5,6 +5,7 @@
 import { DbConnection } from './spacetimedb';
 import type { ChatMessage } from './spacetimedb/types';
 import { rateLimitState } from './rate-limit.svelte';
+import { prepareMessageForSend } from './message-text-policy';
 
 const SPACETIMEDB_URI = 'wss://maincloud.spacetimedb.com';
 const MODULE_NAME = 'wepchat';
@@ -141,7 +142,7 @@ function createSpacetimeChat() {
       console.warn('[WepChat] Nicht verbunden, Nachricht verworfen.');
       return;
     }
-    const clean = text.trim();
+    const clean = prepareMessageForSend(text);
     if (!clean) return;
     try {
       conn.reducers.sendMessage({ url, username, text: clean });

@@ -2,14 +2,14 @@
 
 Priorisierte Maßnahmen für `server/` und `extension/`. Übergreifendes Threat Model und Secrets: [security.md](security.md).
 
-**Stand Implementierung:** §1 Rate-Limit und §6 Retention sind live (Modul `wepchat`, Extension-Build). Gotchas (Codegen `accessor`, Svelte `$derived`): [learnings.md](../learnings.md) §2 und §7.
+**Stand Implementierung:** §1 Rate-Limit, §6 Retention und [Message Content](message-content.md) sind live. Gotchas: [learnings.md](../learnings.md) §2, §7, §9.
 
 **Umsetzungsreihenfolge (aktuell):**
 
 1. **[Nachrichten-Rate-Limit (2 / Minute)](#1-nachrichten-rate-limit-2-pro-minute)** — Server + UX mit Countdown  
 2. Server: Längenlimits, URL-Schema, Localhost, `sender_name` aus `user_session`  
 3. Extension: SQL-Escape in Subscriptions, Localhost in `cleanUrl`  
-4. Server + Client: Text-/Username-Charset ([ideas.md](../kickoff/ideas.md))  
+4. ~~**[Nachrichten-Inhalt (erlaubte Zeichen)](message-content.md)**~~ — erledigt  
 5. **[Nachrichten-Retention 72 h](#6-nachrichten-retention-72-stunden)** — Scheduled Delete **+** Cleanup-Job (nur Server)  
 6. **[Eigene Nachrichten löschen](delete-messages.md)** — Reducer `delete_own_message` (nur `ctx.sender`); Extension: Trash, `bubble own` über Identity (Anzeige weiter `sender_name`)  
 7. Optional: Moderation-Reducer (Admin-`Identity` nur im Rust-Modul)
@@ -115,7 +115,7 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 | **Nur `http`/`https`** | Exotische Schemes | Prefix-Check |
 | **Localhost blocken** | Interne URLs als Raum | `localhost`, `127.0.0.1`, `::1`, private IPs |
 | **`send_message`: Anzeigename vom Server** | Impersonation via `username` | `sender_name` aus `user_session` für `ctx.sender` |
-| **Text-Policy** | Links/HTML | Serverseitig Zeichen/URL-Muster blockieren |
+| **Text-Policy** | erledigt | [message-content.md](message-content.md) |
 
 Retention 72 h: eigene Spezifikation in [Abschnitt 6](#6-nachrichten-retention-72-stunden).
 
@@ -134,7 +134,7 @@ const MAX_USERNAME_LEN: usize = 32;
 |----------|-----|-----------|
 | **SQL escapen** | `spacetime.svelte.ts` (Subscriptions) | `'` in URL; Pattern wie `background.ts` |
 | **Localhost** | `cleanUrl()` / `url.svelte.ts` | Kein Chat-Raum |
-| **Nachrichten vor Send** | `App.svelte` | Länge/Charset spiegeln Server |
+| **Nachrichten vor Send** | erledigt | [message-content.md](message-content.md) |
 | **Identity-Token** | `spacetime.svelte.ts` | Optional `storage.local` für stabile Identity |
 | **Subscriptions** | `subscribeToUrl` | Alte Subscription beim URL-Wechsel beenden |
 

@@ -148,7 +148,7 @@ Priorität aus Produktrisiko:
 1. **Reducer-Validierung:** Max-Länge für `text`, `username`, `url`; leere/Whitespace bereits teilweise abgefangen.
 2. **Rate-Limiting** pro `ctx.sender` — Spezifikation: **2 Nachrichten / 60 s**, UX mit Countdown: [security-list.md](security-list.md#1-nachrichten-rate-limit-2-pro-minute).
 3. **Retention 72 h** — Scheduled Delete pro Nachricht **und** wiederkehrender Cleanup (nur Server): [security-list.md](security-list.md#6-nachrichten-retention-72-stunden), Kurz [spacetimedb.md](../kickoff/spacetimedb.md).
-4. **Inhaltsregeln** — Text-only, keine Links ([ideas.md](../kickoff/ideas.md)).
+4. **Inhaltsregeln** — umgesetzt: [message-content.md](message-content.md) (`message-text-policy.ts` + `send_message` / `join_room`).
 5. **Localhost ausschließen** — Client + optional serverseitig ablehnen.
 6. **Moderation-Reducer** — nur für autorisierte Identities; keine Admin-Keys im Client.
 7. **Sensible Tabellen `private`** machen, falls später Nutzerdaten jenseits des öffentlichen Chats nötig sind.

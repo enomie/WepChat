@@ -1,4 +1,5 @@
 // Rate limit & retention: docs/requirements/security-list.md §1 + §6
+// Message charset: docs/requirements/message-content.md
 use spacetimedb::{
     reducer, table, Identity, ReducerContext, ScheduleAt, Table, TimeDuration, Timestamp,
 };
@@ -59,6 +60,21 @@ struct PurgeExpiredSchedule {
 
 fn only_scheduler(ctx: &ReducerContext) -> bool {
     ctx.sender == ctx.identity()
+}
+
+fn char_allowed(c: char) -> bool {
+    if c.is_ascii_alphanumeric() {
+        return true;
+    }
+    matches!(c, 'Ä' | 'Ö' | 'Ü' | 'ä' | 'ö' | 'ü' | 'ß' | ' ' | ',' | '.' | '-')
+}
+
+fn text_is_allowed(s: &str) -> bool {
+    s.chars().all(char_allowed)
+}
+
+fn normalize_allowed_text(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn count_recent_messages(ctx: &ReducerContext, sender: Identity) -> u32 {
@@ -164,17 +180,26 @@ pub fn join_room(ctx: &ReducerContext, url: String, username: String) {
 
     ensure_purge_job(ctx);
 
+    let clean_username = username.trim().to_string();
+    if clean_username.is_empty() || !text_is_allowed(&clean_username) {
+        return;
+    }
+    let normalized_username = normalize_allowed_text(&clean_username);
+    if normalized_username.is_empty() {
+        return;
+    }
+
     let sessions = ctx.db.user_session();
     if let Some(mut existing) = sessions.identity().find(&ctx.sender) {
         existing.current_url = clean_url;
-        existing.username = username;
+        existing.username = normalized_username;
         existing.joined_at = ctx.timestamp;
         sessions.identity().update(existing);
     } else {
         sessions.insert(UserSession {
             identity: ctx.sender,
             current_url: clean_url,
-            username,
+            username: normalized_username,
             joined_at: ctx.timestamp,
         });
     }
@@ -196,6 +221,23 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         return;
     }
 
+    if !text_is_allowed(&clean_text) {
+        return;
+    }
+    let normalized_text = normalize_allowed_text(&clean_text);
+    if normalized_text.is_empty() {
+        return;
+    }
+
+    let clean_username = username.trim().to_string();
+    if clean_username.is_empty() || !text_is_allowed(&clean_username) {
+        return;
+    }
+    let normalized_username = normalize_allowed_text(&clean_username);
+    if normalized_username.is_empty() {
+        return;
+    }
+
     ensure_purge_job(ctx);
 
     if count_recent_messages(ctx, ctx.sender) >= MAX_MESSAGES_PER_WINDOW {
@@ -206,8 +248,8 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         id: 0,
         url: clean_url,
         sender_identity: ctx.sender,
-        sender_name: username,
-        text: clean_text,
+        sender_name: normalized_username,
+        text: normalized_text,
         created_at: ctx.timestamp,
     });
 

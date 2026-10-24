@@ -13,6 +13,7 @@ WepChat/                            <-- Projekt-Root
 │   ├── requirements/
 │   │   ├── general.md              <-- Allgemeine Anforderungen
 │   │   ├── security.md             <-- Secrets, Threat Model, SpacetimeDB-Zugang
+│   │   ├── message-content.md      <-- Erlaubte Zeichen in Chat-Nachrichten
 │   │   └── architektur.md          <-- Monorepo-Struktur & Aufteilung
 │   └── infos/                      <-- Notizen, Recherchen & API-Referenzen
 │

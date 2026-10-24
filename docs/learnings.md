@@ -189,3 +189,12 @@ Spezifikation Rate-Limit: [security-list.md](requirements/security-list.md#1-nac
 
 Server-Logik in `server/src/lib.rs` (2 Nachrichten / 60 s, 72 h Retention via Scheduled Tables). Übersicht: [security-list.md](requirements/security-list.md).
 
+---
+
+## 9. Nachrichten-Zeichenfilter (`message-text-policy.ts`)
+
+- **Eine Policy-Datei:** `extension/src/lib/message-text-policy.ts` — `filterMessageInput` (Tippen/Paste), `prepareMessageForSend` (Senden).
+- **Nicht in `$derived` filtern** — nur in Event-Handlern (`oninput` / `onpaste`), sonst Risiko `state_unsafe_mutation` (wie §7).
+- **Server lehnt ab, säubert nicht:** Verbotene Zeichen in `send_message` / `join_room` → `return`, kein Strip fremder Müll-Strings.
+- Spec: [message-content.md](requirements/message-content.md).
+
