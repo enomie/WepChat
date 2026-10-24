@@ -29,6 +29,8 @@ pub struct UserSession {
     pub current_url: String,
     pub username: String,
     pub joined_at: Timestamp,
+    #[default(1u8)]
+    pub nick_color: u8,
 }
 
 // 2. Tabelle für Chat-Nachrichten
@@ -42,6 +44,8 @@ pub struct ChatMessage {
     pub sender_name: String,
     pub text: String,
     pub created_at: Timestamp,
+    #[default(1u8)]
+    pub sender_nick_color: u8,
 }
 
 #[table(name = delete_message_schedule, scheduled(delete_message))]
@@ -61,7 +65,7 @@ struct PurgeExpiredSchedule {
     scheduled_at: ScheduleAt,
 }
 
-/// Letzte Sendezeiten pro Identity (2/Min) — kein Scan über `chat_message`.
+/// Letzte Sendezeiten pro Identity (2/Min), kein Scan über `chat_message`.
 #[table(name = send_rate_state)]
 struct SendRateState {
     #[primary_key]
@@ -91,6 +95,23 @@ fn within_char_limit(s: &str, max: usize) -> bool {
 
 fn normalize_allowed_text(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn normalize_nick_color(raw: u8) -> u8 {
+    if raw >= 1 && raw <= 9 {
+        raw
+    } else {
+        1
+    }
+}
+
+fn nick_color_for_sender(ctx: &ReducerContext, sender: Identity) -> u8 {
+    ctx.db
+        .user_session()
+        .identity()
+        .find(&sender)
+        .map(|s| normalize_nick_color(s.nick_color))
+        .unwrap_or(1)
 }
 
 fn rate_window_start(now: Timestamp) -> Timestamp {
@@ -246,7 +267,7 @@ pub fn identity_disconnected(ctx: &ReducerContext) {
 
 // 4. Reducer: Raum betreten / URL wechseln
 #[reducer]
-pub fn join_room(ctx: &ReducerContext, url: String, username: String) {
+pub fn join_room(ctx: &ReducerContext, url: String, username: String, nick_color: u8) {
     let clean_url = url.trim().to_string();
     if clean_url.is_empty() {
         return;
@@ -263,10 +284,13 @@ pub fn join_room(ctx: &ReducerContext, url: String, username: String) {
         return;
     }
 
+    let color = normalize_nick_color(nick_color);
+
     let sessions = ctx.db.user_session();
     if let Some(mut existing) = sessions.identity().find(&ctx.sender) {
         existing.current_url = clean_url;
         existing.username = normalized_username;
+        existing.nick_color = color;
         existing.joined_at = ctx.timestamp;
         sessions.identity().update(existing);
     } else {
@@ -275,6 +299,7 @@ pub fn join_room(ctx: &ReducerContext, url: String, username: String) {
             current_url: clean_url,
             username: normalized_username,
             joined_at: ctx.timestamp,
+            nick_color: color,
         });
     }
 }
@@ -318,6 +343,8 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         return;
     }
 
+    let sender_nick_color = nick_color_for_sender(ctx, ctx.sender);
+
     let row = ctx.db.chat_message().insert(ChatMessage {
         id: 0,
         url: clean_url,
@@ -325,6 +352,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         sender_name: normalized_username,
         text: normalized_text,
         created_at: ctx.timestamp,
+        sender_nick_color,
     });
 
     schedule_message_deletion(ctx, row.id, row.created_at);
@@ -374,6 +402,20 @@ mod rate_window_tests {
         let (a, b) = merge_rate_timestamps_after_send(ts(10), ts(150), now, start);
         assert_eq!(a, ts(150));
         assert_eq!(b, ts(200));
+    }
+
+    #[test]
+    fn nick_color_valid_range_unchanged() {
+        for id in 1u8..=9 {
+            assert_eq!(normalize_nick_color(id), id);
+        }
+    }
+
+    #[test]
+    fn nick_color_invalid_defaults_to_blue() {
+        assert_eq!(normalize_nick_color(0), 1);
+        assert_eq!(normalize_nick_color(10), 1);
+        assert_eq!(normalize_nick_color(255), 1);
     }
 
     #[test]

@@ -1,5 +1,5 @@
 /**
- * Erlaubte Zeichen + Längen — docs/requirements/message-content.md
+ * Erlaubte Zeichen + Längen, docs/requirements/message-content.md
  */
 const ALLOWED_CHAR_PATTERN = /[^A-Za-z0-9\u00C4\u00D6\u00DC\u00E4\u00F6\u00FC\u00DF ,.\-]/g;
 

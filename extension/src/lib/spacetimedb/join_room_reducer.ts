@@ -13,4 +13,5 @@ import {
 export default {
   url: __t.string(),
   username: __t.string(),
+  nickColor: __t.u8(),
 };

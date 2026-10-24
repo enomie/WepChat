@@ -9,7 +9,7 @@ todos:
     content: last_own_message_text + check in send_message (lib.rs)
     status: pending
   - id: ext-echo-optional
-    content: Client prepareMessageForSend vs. letzte eigene Bubble (Identity) — Send disabled/hint
+    content: Client prepareMessageForSend vs. letzte eigene Bubble (Identity), Send disabled/hint
     status: pending
   - id: deploy-echo
     content: wasm build, spacetime publish wepchat, npm run build
@@ -21,16 +21,16 @@ isProject: false
 
 ## Ziel
 
-Bots, die **denselben Text wiederholt** posten, bremsen — ohne Identity-Langzeit-Quotas. Regel: **kein zweites Mal derselbe Inhalt** direkt hinter der **eigenen letzten Nachricht im aktuellen Raum**.
+Bots, die **denselben Text wiederholt** posten, bremsen, ohne Identity-Langzeit-Quotas. Regel: **kein zweites Mal derselbe Inhalt** direkt hinter der **eigenen letzten Nachricht im aktuellen Raum**.
 
 | Aspekt | Vorgabe |
 |--------|---------|
-| Vergleich | **Zeichenfolge** auf `normalized_text` (nach Charset + `normalize_allowed_text` — gleich wie Insert) |
+| Vergleich | **Zeichenfolge** auf `normalized_text` (nach Charset + `normalize_allowed_text`, gleich wie Insert) |
 | Scope | `ctx.sender` + `clean_url` (Raum) |
 | Verhalten | Stilles `return` in `send_message` (wie Rate-Limit, Charset) |
 | Hash | **Nicht nötig** für MVP (kurze Strings); optional später, wenn Längenlimits kommen |
 
-**Wirksamkeit:** Stoppt „10× hintereinander derselbe Text“ bereits beim **2. Versuch** (1. ist gespeichert, 2. identisch → block). Identity-Rotation umgeht es weiterhin — akzeptabel; kombiniert mit **2/Min** und Charset.
+**Wirksamkeit:** Stoppt „10× hintereinander derselbe Text“ bereits beim **2. Versuch** (1. ist gespeichert, 2. identisch → block). Identity-Rotation umgeht es weiterhin, akzeptabel; kombiniert mit **2/Min** und Charset.
 
 **Nicht betroffen:** `join_room`, fremde Nachrichten zitieren (eigene letzte war anders), „a“ → „b“ → „a“.
 
@@ -46,7 +46,7 @@ flowchart TD
 
 ---
 
-## 1. Server — [`server/src/lib.rs`](server/src/lib.rs)
+## 1. Server, [`server/src/lib.rs`](server/src/lib.rs)
 
 ### 1.1 State-Tabelle (kein Scan)
 
@@ -79,7 +79,7 @@ Schema-Change (`sender_room_state`) → `npm run codegen:stdb` in `extension/`.
 
 ---
 
-## 2. Extension (optional, geringer Aufwand — empfohlen)
+## 2. Extension (optional, geringer Aufwand, empfohlen)
 
 Parallele zu Rate-Limit: Nutzer sieht selten „Senden ins Leere“.
 
@@ -87,8 +87,8 @@ Parallele zu Rate-Limit: Nutzer sieht selten „Senden ins Leere“.
 
 Neues kleines Modul [`extension/src/lib/echo-guard.ts`](extension/src/lib/echo-guard.ts) (kein `$state` nötig):
 
-- `lastOwnMessageTextInRoom(messages, identityHex, roomUrl): string | null` — aus Subscription-State, `senderIdentity.toHexString()`, sortiert nach `id` / `createdAt`
-- `isEchoDuplicate(preparedText, lastOwn): boolean` — `preparedText.length > 0 && lastOwn !== null && preparedText === lastOwn`
+- `lastOwnMessageTextInRoom(messages, identityHex, roomUrl): string | null`, aus Subscription-State, `senderIdentity.toHexString()`, sortiert nach `id` / `createdAt`
+- `isEchoDuplicate(preparedText, lastOwn): boolean`, `preparedText.length > 0 && lastOwn !== null && preparedText === lastOwn`
 
 `preparedText` = `prepareMessageForSend(...)` (gleiche Normalisierung wie Server).
 
@@ -104,7 +104,7 @@ Neues kleines Modul [`extension/src/lib/echo-guard.ts`](extension/src/lib/echo-g
 
 Kein Pflicht-Change; optional **kein** `recordSend()` bei rein clientseitig blockiertem Echo (Rate-Limit bleibt unberührt).
 
-**Hinweis:** `bubble own` nutzt heute `senderName` — für Echo **Identity** verwenden (wie in [delete-messages.md](docs/requirements/delete-messages.md) geplant).
+**Hinweis:** `bubble own` nutzt heute `senderName`, für Echo **Identity** verwenden (wie in [delete-messages.md](docs/requirements/delete-messages.md) geplant).
 
 ---
 

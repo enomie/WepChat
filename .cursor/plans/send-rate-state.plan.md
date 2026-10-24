@@ -12,7 +12,7 @@ todos:
     content: wasm build, spacetime publish wepchat, npm run codegen:stdb
     status: pending
   - id: docs-rate-state
-    content: security-list §1, server-query-patterns, learnings §11 — Ist-Zustand Hilfstabelle
+    content: security-list §1, server-query-patterns, learnings §11, Ist-Zustand Hilfstabelle
     status: pending
 isProject: false
 ---
@@ -36,9 +36,9 @@ flowchart LR
 
 ---
 
-## 1. Schema — [`server/src/lib.rs`](server/src/lib.rs)
+## 1. Schema, [`server/src/lib.rs`](server/src/lib.rs)
 
-Neue Tabelle **`send_rate_state`** (ohne `public` — nur Modul/Reducer, nicht für Client-Subscriptions nötig):
+Neue Tabelle **`send_rate_state`** (ohne `public`, nur Modul/Reducer, nicht für Client-Subscriptions nötig):
 
 ```rust
 #[table(name = send_rate_state)]
@@ -79,7 +79,7 @@ record_rate_send(ctx, ctx.sender, ctx.timestamp);
 
 **Entfernen:** gesamte Funktion `count_recent_messages` und deren `iter()`-Schleife.
 
-**Optional (Hygiene):** In `identity_disconnected` Zeile `send_rate_state` für `ctx.sender` löschen — verhindert tote State-Zeilen; kein Muss für Korrektheit.
+**Optional (Hygiene):** In `identity_disconnected` Zeile `send_rate_state` für `ctx.sender` löschen, verhindert tote State-Zeilen; kein Muss für Korrektheit.
 
 ---
 
@@ -96,7 +96,7 @@ Ein Satz in [server-query-patterns.md](docs/requirements/server-query-patterns.m
 
 ## 4. Tests
 
-### 4.1 Automatisch — `cargo test` in `server/`
+### 4.1 Automatisch, `cargo test` in `server/`
 
 `#[cfg(test)] mod tests` in `lib.rs` (oder kleines `rate_window.rs`):
 
@@ -109,7 +109,7 @@ Ein Satz in [server-query-patterns.md](docs/requirements/server-query-patterns.m
 
 ### 4.2 Manuell (Sidepanel)
 
-Bestehende [§1.6 Testideen](docs/requirements/security-list.md#16-testideen-manuell) — unverändert gültig; optional Punkt 5: SQL/Dashboard — nach 2 Sends existiert Zeile in `send_rate_state` für die Identity.
+Bestehende [§1.6 Testideen](docs/requirements/security-list.md#16-testideen-manuell), unverändert gültig; optional Punkt 5: SQL/Dashboard, nach 2 Sends existiert Zeile in `send_rate_state` für die Identity.
 
 Kein `spacetime call --anonymous` für Rate-Tests (neue Identity pro Call).
 

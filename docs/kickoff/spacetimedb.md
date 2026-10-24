@@ -27,7 +27,7 @@ spacetime login
 ```
 *(Es öffnet sich ein Browserfenster zur Bestätigung der Anmeldung.)*
 
-> **Sicherheit:** Dieses Login ist **nur für Entwickler** (Publish, Verwaltung). Es gehört **nicht** in die Browser-Extension. URI, Modulname und Client-Identity sind ein anderes Thema — siehe [security.md](../requirements/security.md).
+> **Sicherheit:** Dieses Login ist **nur für Entwickler** (Publish, Verwaltung). Es gehört **nicht** in die Browser-Extension. URI, Modulname und Client-Identity sind ein anderes Thema, siehe [security.md](../requirements/security.md).
 
 ---
 
@@ -151,7 +151,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
    cd ../extension
    npm run codegen:stdb
    ```
-   (`codegen:stdb` = `spacetime generate --module-path ../server` + `scripts/patch-spacetimedb-codegen.js` — siehe [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).)
+   (`codegen:stdb` = `spacetime generate --module-path ../server` + `scripts/patch-spacetimedb-codegen.js`, siehe [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).)
 
 > **Wichtiger Workflow:**  
 > Nach Änderungen in `server/src/lib.rs`: `spacetime publish wepchat -y`, dann `cd extension && npm run codegen:stdb`, danach `npm run build` und Extension neu laden.
@@ -165,38 +165,38 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 2. **Automatischer Disconnect (`#[reducer(client_disconnected)]`):**  
    Schließt ein Nutzer den Tab oder verliert die Verbindung, feuert SpacetimeDB diesen Reducer serverseitig. So bleibt der Presence-Zähler verlässlich aktuell.
 3. **Subscriptions im Sidepanel:**  
-   Das Sidepanel nutzt WebSocket-Subscriptions (`chat_message` / `user_session` pro URL) — Push statt Polling. Der **Background Service Worker** für den Live-Badge nutzt zusätzlich einen leichten **HTTP-SQL**-Count (siehe [live_badge.md](../requirements/live_badge.md), [security.md](../requirements/security.md)).
+   Das Sidepanel nutzt WebSocket-Subscriptions (`chat_message` / `user_session` pro URL), Push statt Polling. Der **Background Service Worker** für den Live-Badge nutzt zusätzlich einen leichten **HTTP-SQL**-Count (siehe [live_badge.md](../requirements/live_badge.md), [security.md](../requirements/security.md)).
 
 ---
 
 ### Wichtige Client- & Extension-Hinweise (Gotchas)
 * **Chrome Extension CSP (`unsafe-eval`)**: SpacetimeDB generiert intern dynamische Serializer via `new Function(...)`. Dies wird im Build über das Patch-Skript `scripts/patch-spacetimedb.js` automatisch auf statische Interpreter umgeschrieben.
 * **Reducer-Aufruf-Konvention**: Reducer werden im TypeScript SDK in **CamelCase** aufgerufen und erwarten ein **Parameter-Objekt** (z. B. `conn.reducers.joinRoom({ url, username })`).
-* **Codegen / Index-`accessor`:** immer `npm run codegen:stdb` in `extension/` — [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).
-* **Nachrichten-Inhalt:** `send_message` und `join_room` validieren erlaubte Zeichen — [message-content.md](../requirements/message-content.md).
-* **Kein `chat_message().iter()` auf dem Send-Pfad:** Rate-Limit/Echo über Hilfstabellen, Purge über `created_at`-Index — [server-query-patterns.md](../requirements/server-query-patterns.md), [learnings.md §11](../learnings.md#11-kein-chat_message-vollscan-in-reducern).
+* **Codegen / Index-`accessor`:** immer `npm run codegen:stdb` in `extension/`, [learnings.md](../learnings.md#2-typescript-bindings-fehlendes-index-accessor).
+* **Nachrichten-Inhalt:** `send_message` und `join_room` validieren erlaubte Zeichen, [message-content.md](../requirements/message-content.md).
+* **Kein `chat_message().iter()` auf dem Send-Pfad:** Rate-Limit/Echo über Hilfstabellen, Purge über `created_at`-Index, [server-query-patterns.md](../requirements/server-query-patterns.md), [learnings.md §11](../learnings.md#11-kein-chat_message-vollscan-in-reducern).
 * Detaillierte Dokumentation dazu siehe: [learnings.md](../learnings.md).
 
 ---
 
 ### Nachrichten-Retention (72 Stunden)
 
-Chat-Nachrichten werden **nur serverseitig** gelöscht — **beide** Mechanismen zusammen (Doppel-Absicherung). Kein Client-Filter in der Subscription; die Extension lädt weiter `SELECT * FROM chat_message WHERE url = …` und erhält Deletes per Push.
+Chat-Nachrichten werden **nur serverseitig** gelöscht, **beide** Mechanismen zusammen (Doppel-Absicherung). Kein Client-Filter in der Subscription; die Extension lädt weiter `SELECT * FROM chat_message WHERE url = …` und erhält Deletes per Push.
 
 Vollständige Spezifikation: [security-list.md](../requirements/security-list.md#6-nachrichten-retention-72-stunden).
 
 | Mechanismus | Rolle |
 |-------------|--------|
-| **A — Scheduled Delete pro Nachricht** | Punktgenau ~72 h nach `created_at`; Echtzeit-Delete für Subscribers |
-| **B — Wiederkehrender Cleanup** | Fängt verpasste Timer, Reste und Alt-Daten ab |
+| **A, Scheduled Delete pro Nachricht** | Punktgenau ~72 h nach `created_at`; Echtzeit-Delete für Subscribers |
+| **B, Wiederkehrender Cleanup** | Fängt verpasste Timer, Reste und Alt-Daten ab |
 
-**A — Scheduled Table `delete_message_schedule`:** Nach `insert` in `send_message` eine Zeile mit `scheduled_at = created_at + 72h` (einmalig) → Reducer `delete_message`. Idempotent.
+**A, Scheduled Table `delete_message_schedule`:** Nach `insert` in `send_message` eine Zeile mit `scheduled_at = created_at + 72h` (einmalig) → Reducer `delete_message`. Idempotent.
 
-**B — Scheduled Table `purge_expired_schedule`:** Intervall **15 Min** (`ScheduleAt` aus `TimeDuration`) → Reducer `purge_expired_messages` löscht `created_at < now - 72h`. Bootstrap: `init` + `ensure_purge_job` in `join_room` / `send_message`.
+**B, Scheduled Table `purge_expired_schedule`:** Intervall **15 Min** (`ScheduleAt` aus `TimeDuration`) → Reducer `purge_expired_messages` löscht `created_at < now - 72h`. Bootstrap: `init` + `ensure_purge_job` in `join_room` / `send_message`.
 
 Implementierung: [server/src/lib.rs](../../server/src/lib.rs).
 
-**Bewusst nicht:** Nur in der Extension ältere Nachrichten ausblenden — das wäre keine echte Retention ([security-list.md](../requirements/security-list.md)).
+**Bewusst nicht:** Nur in der Extension ältere Nachrichten ausblenden, das wäre keine echte Retention ([security-list.md](../requirements/security-list.md)).
 
 ---
 

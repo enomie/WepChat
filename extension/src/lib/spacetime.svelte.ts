@@ -5,6 +5,7 @@
 import { DbConnection } from './spacetimedb';
 import type { ChatMessage } from './spacetimedb/types';
 import { rateLimitState } from './rate-limit.svelte';
+import { normalizeNickColorId } from './nick-colors';
 import { prepareMessageForSend } from './message-text-policy';
 import {
   DEFAULT_VISIBLE_LIMIT,
@@ -115,37 +116,46 @@ function createSpacetimeChat() {
     }
   }
 
-  function subscribeToUrl(url: string, username: string) {
-    if (!conn || !state.connected) return; // warten bis connected
-
-    if (subscribedUrl === url) return; // bereits abonniert
-    subscribedUrl = url;
-    state.messages = [];
-    state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
-    state.onlineCount = 0;
-
-    conn
-      .subscriptionBuilder()
-      .onApplied((_ctx) => {
-        // Initial-Daten laden
-        if (!conn) return;
-        const msgs: ChatMessage[] = [];
-        for (const msg of conn.db.chat_message.iter()) {
-          if (msg.url === url) msgs.push(msg);
-        }
-        state.messages = msgs.sort((a, b) => Number(a.id) - Number(b.id));
-        recountOnline();
-      })
-      .subscribe([
-        `SELECT * FROM chat_message WHERE url = '${url}'`,
-        `SELECT * FROM user_session WHERE current_url = '${url}'`,
-      ]);
-
+  function syncPresence(url: string, username: string, nickColorId: number) {
+    if (!conn || !state.connected || !url) return;
     try {
-      conn.reducers.joinRoom({ url, username });
+      conn.reducers.joinRoom({
+        url,
+        username,
+        nickColor: normalizeNickColorId(nickColorId),
+      });
     } catch (err) {
       console.warn('[WepChat] joinRoom error:', err);
     }
+  }
+
+  function subscribeToUrl(url: string, username: string, nickColorId: number) {
+    if (!conn || !state.connected) return;
+
+    if (subscribedUrl !== url) {
+      subscribedUrl = url;
+      state.messages = [];
+      state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
+      state.onlineCount = 0;
+
+      conn
+        .subscriptionBuilder()
+        .onApplied((_ctx) => {
+          if (!conn) return;
+          const msgs: ChatMessage[] = [];
+          for (const msg of conn.db.chat_message.iter()) {
+            if (msg.url === url) msgs.push(msg);
+          }
+          state.messages = msgs.sort((a, b) => Number(a.id) - Number(b.id));
+          recountOnline();
+        })
+        .subscribe([
+          `SELECT * FROM chat_message WHERE url = '${url}'`,
+          `SELECT * FROM user_session WHERE current_url = '${url}'`,
+        ]);
+    }
+
+    syncPresence(url, username, nickColorId);
   }
 
   function sendMessage(url: string, username: string, text: string) {

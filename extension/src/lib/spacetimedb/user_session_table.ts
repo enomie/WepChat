@@ -15,4 +15,5 @@ export default __t.row({
   currentUrl: __t.string().name("current_url"),
   username: __t.string(),
   joinedAt: __t.timestamp().name("joined_at"),
+  nickColor: __t.u8().name("nick_color"),
 });

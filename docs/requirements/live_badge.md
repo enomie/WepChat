@@ -69,7 +69,7 @@ Content-Type: text/plain
 SELECT count(*) as total FROM user_session WHERE current_url = 'https://www.youtube.com/watch?v=...'
 ```
 
-Öffentlicher Lesezugriff auf `public` Tabellen — kein Client-Secret. Siehe [security.md](security.md).
+Öffentlicher Lesezugriff auf `public` Tabellen, kein Client-Secret. Siehe [security.md](security.md).
 * **Vorteil**: 
   * Extrem ressourcensparend (kein dauerhafter WebSocket im Background Service Worker).
   * Der Service Worker kann sich nach dem Request schlafen legen.

@@ -1,12 +1,12 @@
 ---
 name: Chat-Verlauf paginieren
-overview: "Client-seitiges Fenster (Slice): volle URL-Subscription wie heute, UI rendert zunächst die letzten 100; „Ältere laden“ erweitert visibleLimit um 100 — kein Server-View, kein Resubscribe, kein HTTP."
+overview: "Client-seitiges Fenster (Slice): volle URL-Subscription wie heute, UI rendert zunächst die letzten 100; „Ältere laden“ erweitert visibleLimit um 100, kein Server-View, kein Resubscribe, kein HTTP."
 todos:
   - id: ext-history-slice
     content: message-history.ts (slice, hasOlder, scroll helpers) + visibleLimit State
     status: completed
   - id: ext-spacetime-reset
-    content: subscribeToUrl — visibleLimit=100 bei Raumwechsel; messages unverändert voll
+    content: subscribeToUrl, visibleLimit=100 bei Raumwechsel; messages unverändert voll
     status: completed
   - id: ext-app-ui
     content: App.svelte visibleMessages, Button, Scroll-Anker, Auto-Scroll nur unten
@@ -31,11 +31,11 @@ Spec: [message-history-pagination.md](docs/requirements/message-history-paginati
 | Subscription `id >= oldestId` + **Resubscribe** | Snapshot/Live-Overlap, Flackern, doppelte Events bei jedem „Ältere laden“. |
 | HTTP SQL + ORDER BY für Seiten | Fragil; Subscriptions ohne ORDER BY/LIMIT; unnötig bei 72h-Retention. |
 
-**Gewählt: Spec §4.2 — Presentation Layer**
+**Gewählt: Spec §4.2, Presentation Layer**
 
 - **Data:** eine **statische** Subscription pro URL: `SELECT * FROM chat_message WHERE url = '…'` (wie heute).
 - **Cache:** `state.messages` = alle Zeilen des Raums im Client (72h-Bestand, typisch hunderte bis wenige tausend Zeilen).
-- **UI:** nur ein **Slice** rendern — `visibleLimit` startet bei 100, „Ältere laden“ → `visibleLimit += 100` (synchron, 0 ms).
+- **UI:** nur ein **Slice** rendern, `visibleLimit` startet bei 100, „Ältere laden“ → `visibleLimit += 100` (synchron, 0 ms).
 
 ```mermaid
 flowchart TB
@@ -63,11 +63,11 @@ flowchart TB
 
 **Keine Änderung** an [`server/src/lib.rs`](server/src/lib.rs). Kein Publish/Codegen für dieses Feature.
 
-*(Optional später, separates Ticket: Index `url` / Purge — [server-query-patterns.md](docs/requirements/server-query-patterns.md), nicht Blocker für Pagination.)*
+*(Optional später, separates Ticket: Index `url` / Purge, [server-query-patterns.md](docs/requirements/server-query-patterns.md), nicht Blocker für Pagination.)*
 
 ---
 
-## 2. Extension — [`extension/src/lib/message-history.ts`](extension/src/lib/message-history.ts)
+## 2. Extension, [`extension/src/lib/message-history.ts`](extension/src/lib/message-history.ts)
 
 Konstante `MESSAGE_PAGE_SIZE = 100`.
 
@@ -84,11 +84,11 @@ Kein `loadingOlder` (optional kurzes `tick()` nur für Scroll-Anker nach DOM-Upd
 
 ---
 
-## 3. Extension — State
+## 3. Extension, State
 
 In [`spacetime.svelte.ts`](extension/src/lib/spacetime.svelte.ts) oder [`message-history.svelte.ts`](extension/src/lib/message-history.svelte.ts):
 
-- `visibleLimit = $state(100)` — bei **`subscribeToUrl`** (neue URL): zurück auf `100`.
+- `visibleLimit = $state(100)`, bei **`subscribeToUrl`** (neue URL): zurück auf `100`.
 - `messages` bleibt vollständige Liste (bestehende `onInsert`/`onDelete`/`onApplied` Logik).
 - Export: `loadOlderVisible()` → `visibleLimit = nextVisibleLimit(...)`, `get visibleLimit`, derived `hasOlder` aus Längen.
 
@@ -96,7 +96,7 @@ In [`spacetime.svelte.ts`](extension/src/lib/spacetime.svelte.ts) oder [`message
 
 ---
 
-## 4. Extension — [`spacetime.svelte.ts`](extension/src/lib/spacetime.svelte.ts)
+## 4. Extension, [`spacetime.svelte.ts`](extension/src/lib/spacetime.svelte.ts)
 
 - `subscribeToUrl`: bei URL-Wechsel `visibleLimit = 100`, `messages = []` wie heute.
 - Subscription-SQL **unverändert** (nur `url`).
@@ -104,7 +104,7 @@ In [`spacetime.svelte.ts`](extension/src/lib/spacetime.svelte.ts) oder [`message
 
 ---
 
-## 5. UI — [`extension/src/App.svelte`](extension/src/App.svelte)
+## 5. UI, [`extension/src/App.svelte`](extension/src/App.svelte)
 
 - `$derived visibleMessages = visibleMessagesSlice(spacetimeChat.current.messages, visibleLimit)`.
 - `{#each visibleMessages as msg}` statt voller Liste.
@@ -124,7 +124,7 @@ Cases: Slice bei 250/100 → 100 neueste; `hasOlder`; `nextVisibleLimit` cap at 
 
 ### 6.2 Manuell
 
-[message-history-pagination.md §8.1](docs/requirements/message-history-pagination.md) — Ladespinner nicht nötig; Scroll-Anker + Echtzeit unten.
+[message-history-pagination.md §8.1](docs/requirements/message-history-pagination.md), Ladespinner nicht nötig; Scroll-Anker + Echtzeit unten.
 
 ---
 
@@ -138,7 +138,7 @@ Cases: Slice bei 250/100 → 100 neueste; `hasOlder`; `nextVisibleLimit` cap at 
 ## 8. Bewusst akzeptierte Grenzen
 
 - Netzwerk: weiterhin **voller** Raum-Sync über WebSocket (OK für 72h-Fenster).
-- Wenn Räume extrem groß werden: separates Ticket (Index, serverseitige Views/Procedures **nur** nach Bedarf) — nicht vorab.
+- Wenn Räume extrem groß werden: separates Ticket (Index, serverseitige Views/Procedures **nur** nach Bedarf), nicht vorab.
 
 ---
 

@@ -12,7 +12,7 @@ function createRateLimitState() {
     sendTimestamps = sendTimestamps.filter((t) => now - t < WINDOW_MS);
   }
 
-  /** Read-only — no $state writes (safe inside $derived). */
+  /** Read-only, no $state writes (safe inside $derived). */
   function activeTimestamps(now: number): number[] {
     return sendTimestamps.filter((t) => now - t < WINDOW_MS);
   }

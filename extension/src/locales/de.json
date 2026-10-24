@@ -22,14 +22,36 @@
     "noActiveTab": "Kein Tab aktiv"
   },
   "info": {
-    "title": "Anonym & lokal",
-    "bullet1": "Kein Login — Pseudonym und Profil nur in diesem Browser gespeichert.",
-    "bullet2": "URLs werden bereinigt, damit ihr im gleichen Raum landet.",
-    "bullet3": "Server sieht deine SpacetimeDB-Identity, nicht deinen echten Namen."
+    "title": "Deine Sicherheit",
+    "safety1": "Pass auf dich auf.",
+    "safety2": "Ignoriere alle, die dich verletzen oder provozieren wollen.",
+    "safety3": "Vertraue niemandem, auch nicht den KI-Bots.",
+    "safety4": "Teile niemals persönliche Daten wie Name, Adresse, E-Mail oder Telefonnummer.",
+    "safety5": "Bleib freundlich und respektvoll.",
+    "safety6": "Hinterlasse nichts, wofür wir Polizei, Interpol, CIA oder sonst wen auf dich ansetzen müssten.",
+    "faqTitle": "FAQ",
+    "faq1": "Kein Login. Pseudonym und Profil werden nur in diesem Browser gespeichert.",
+    "faq2": "Browser-Cache geleert? Profil und Spitzname bleiben erhalten.",
+    "faq3": "Extension neu installiert oder App-Daten zurückgesetzt? Du startest komplett neu mit einer neuen anonymen ID.",
+    "faq4": "Inkognito-Modus? Nur temporäre Sitzung, wird beim Schließen zurückgesetzt.",
+    "faq5": "Nachrichten verfallen: Alle Chat-Nachrichten werden nach 72 Stunden automatisch gelöscht.",
+    "contact": "Kontakt: wepchat@proton.me"
   },
   "settings": {
     "pseudonymLabel": "Pseudonym:",
-    "identityPrefix": "ID: {id}…"
+    "identityPrefix": "ID: {id}…",
+    "colorLabel": "Farbe:",
+    "colors": {
+      "blue": "Blau",
+      "red": "Rot",
+      "orange": "Orange",
+      "yellow": "Gelb",
+      "green": "Grün",
+      "violet": "Violett",
+      "pink": "Pink",
+      "brown": "Braun",
+      "turquoise": "Türkis"
+    }
   },
   "messages": {
     "openTab": "Öffne einen Website-Tab um den Chat zu laden.",

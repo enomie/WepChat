@@ -18,6 +18,7 @@ Ein Cross-Browser Plugin (Chrome, Edge, Firefox), das automatisch erkennt, auf w
 * **Kein Account-Zwang:** Nutzeridentitäten basieren auf zufällig generierten Keys (SpacetimeDB Identity) und lokalen Profildaten im Browser.
 * **Lokale Speicherung:** Pseudonyme und Präferenzen werden ausschließlich in `chrome.storage.local` abgelegt.
 * **URL-Bereinigung (Sanitization):** Vor dem Betreten eines Raums werden Tracking-Parameter, Sessions und Referrer aus der URL entfernt (z. B. `amazon.de/dp/B0CSJZFNY9?ref=xyz` $\rightarrow$ `amazon.de/dp/B0CSJZFNY9`), um Datenlecks zu vermeiden und Raum-Fragmentierung zu verhindern.
+* **Kontakt:** wepchat@proton.me
 
 ---
 

@@ -17,4 +17,5 @@ export default __t.row({
   senderName: __t.string().name("sender_name"),
   text: __t.string(),
   createdAt: __t.timestamp().name("created_at"),
+  senderNickColor: __t.u8().name("sender_nick_color"),
 });

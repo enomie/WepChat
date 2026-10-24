@@ -76,6 +76,20 @@ $title = 'WepChat - Realtime URL-Chat & Presence Extension';
         footer a:hover {
             text-decoration: underline;
         }
+        .legal {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .legal h2 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+            color: #60a5fa;
+        }
+        .legal p {
+            color: var(--muted);
+            margin: 0 0 1.5rem;
+        }
     </style>
 </head>
 <body>
@@ -100,8 +114,25 @@ $title = 'WepChat - Realtime URL-Chat & Presence Extension';
             </div>
         </section>
 
+        <section class="legal" id="datenschutz">
+            <h2>Datenschutz</h2>
+            <p>
+                WepChat speichert dein Pseudonym und Profil lokal in der Browser-Extension.
+                Chat-Inhalte und normalisierte URLs werden für den Betrieb des Dienstes auf dem Server verarbeitet
+                und nach 72 Stunden gelöscht. Ausführliche Hinweise folgen hier in Kürze.
+            </p>
+            <p>Kontakt: wepchat@proton.me</p>
+        </section>
+
+        <section class="legal" id="impressum">
+            <h2>Impressum</h2>
+            <p>Angaben gemäß § 5 TMG und verantwortlicher Kontakt für WepChat folgen in Kürze.</p>
+            <p>Kontakt: wepchat@proton.me</p>
+        </section>
+
         <footer>
             <p>&copy; <?= date('Y') ?> WepChat. Alle Rechte vorbehalten.</p>
+            <p>Kontakt: wepchat@proton.me</p>
             <p>
                 <a href="#datenschutz">Datenschutz</a> &bull;
                 <a href="#impressum">Impressum</a>

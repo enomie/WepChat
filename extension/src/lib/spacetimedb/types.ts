@@ -17,6 +17,7 @@ export const ChatMessage = __t.object("ChatMessage", {
   senderName: __t.string(),
   text: __t.string(),
   createdAt: __t.timestamp(),
+  senderNickColor: __t.u8(),
 });
 export type ChatMessage = __Infer<typeof ChatMessage>;
 
@@ -33,11 +34,19 @@ export const PurgeExpiredSchedule = __t.object("PurgeExpiredSchedule", {
 });
 export type PurgeExpiredSchedule = __Infer<typeof PurgeExpiredSchedule>;
 
+export const SendRateState = __t.object("SendRateState", {
+  identity: __t.identity(),
+  sendAt1: __t.timestamp(),
+  sendAt2: __t.timestamp(),
+});
+export type SendRateState = __Infer<typeof SendRateState>;
+
 export const UserSession = __t.object("UserSession", {
   identity: __t.identity(),
   currentUrl: __t.string(),
   username: __t.string(),
   joinedAt: __t.timestamp(),
+  nickColor: __t.u8(),
 });
 export type UserSession = __Infer<typeof UserSession>;
 

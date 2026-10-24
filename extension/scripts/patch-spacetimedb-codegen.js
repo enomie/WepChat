@@ -33,5 +33,5 @@ if (patched !== content) {
   fs.writeFileSync(indexPath, patched);
   console.log('[patch-codegen] added index accessors in spacetimedb/index.ts');
 } else if (!content.includes("accessor: '")) {
-  console.warn('[patch-codegen] index.ts unchanged — check generator output format.');
+  console.warn('[patch-codegen] index.ts unchanged, check generator output format.');
 }

@@ -1,6 +1,6 @@
 # WepChat
 
-**Chat with everyone on the same page.** WepChat is a cross-browser extension that turns the current URL into a live chat room — with real-time presence so you always see how many people are on that exact page with you.
+**Chat with everyone on the same page.** WepChat is a cross-browser extension that turns the current URL into a live chat room, with real-time presence so you always see how many people are on that exact page with you.
 
 No account. No social login. Open the side panel and talk.
 
@@ -18,7 +18,7 @@ A pre-built unpacked extension lives in the repo:
 
 ## Why WepChat?
 
-Every day millions of people visit the same product page, article, or docs URL — but they never know it. WepChat adds a lightweight social layer **per URL**:
+Every day millions of people visit the same product page, article, or docs URL, but they never know it. WepChat adds a lightweight social layer **per URL**:
 
 | | |
 |---|---|
@@ -61,7 +61,7 @@ flowchart LR
 | Realtime backend | [SpacetimeDB](https://spacetimedb.com/) (Rust module → WASM) |
 | Web | PHP placeholder for legal/landing pages (`web/`) |
 
-Chrome uses the **Side Panel API**; Firefox uses **Sidebar Action** — one codebase, two builds.
+Chrome uses the **Side Panel API**; Firefox uses **Sidebar Action**, one codebase, two builds.
 
 ---
 
@@ -126,10 +126,10 @@ The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module
 
 ## Privacy & data
 
-- **No mandatory registration** — identity comes from SpacetimeDB’s connection identity; display name is a local pseudonym.
+- **No mandatory registration**, identity comes from SpacetimeDB’s connection identity; display name is a local pseudonym.
 - **Profile data** stays in `chrome.storage.local` (or Firefox equivalent).
 - **URLs are normalized** before room lookup (tracking params removed) to reduce fragmentation and accidental leakage of session tokens in query strings.
-- **Chat text & display names** are limited to letters (incl. German umlauts), digits, spaces, and `,` `.` `-` — enforced in the extension and on the server: [message-content.md](docs/requirements/message-content.md).
+- **Chat text & display names** are limited to letters (incl. German umlauts), digits, spaces, and `,` `.` `-`, enforced in the extension and on the server: [message-content.md](docs/requirements/message-content.md).
 - **Secrets & threat model** (CLI vs. client, public tables, what not to put in the extension): [docs/requirements/security.md](docs/requirements/security.md)
 
 ---
@@ -141,7 +141,13 @@ The extension connects to **SpacetimeDB Maincloud** by default (`wepchat` module
 - [x] Extension ↔ Maincloud integration
 - [x] Message rate limit, 72h retention, allowed-character filter
 - [ ] Store listing polish, moderation, user delete own messages
-- [ ] Mobile strategy (PWA / share-sheet) — see [requirements](docs/requirements/general.md)
+- [ ] Mobile strategy (PWA / share-sheet), see [requirements](docs/requirements/general.md)
+
+---
+
+## Contact
+
+Official email: wepchat@proton.me (support, privacy, legal).
 
 ---
 
@@ -151,4 +157,4 @@ Issues and PRs are welcome on [github.com/enomie/WepChat](https://github.com/eno
 
 ---
 
-**WepChat** — *the web page you’re on is already a crowd; now you can say hello.*
+**WepChat**, *the web page you’re on is already a crowd; now you can say hello.*

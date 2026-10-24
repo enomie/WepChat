@@ -56,6 +56,7 @@ WepChat/                            <-- Projekt-Root
 
 3. **`web/` (PHP / Statisch - Optional)**
    * **Aufgabe:** Datenschutz-Erklärung, Impressum und Landingpage.
+   * **Kontakt:** Offizielle E-Mail wepchat@proton.me (Impressum, Datenschutz, Support).
 
 ---
 

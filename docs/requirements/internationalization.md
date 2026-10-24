@@ -4,8 +4,8 @@ Die Extension soll für Nutzer weltweit nutzbar sein: **UI-Texte** folgen der Br
 
 Verwandte Docs:
 
-- [general.md](general.md) — Plattform, Profil, Pseudonym
-- [message-content.md](message-content.md) — erlaubte Zeichen in Chat-Nachrichten (unabhängig von UI-Sprache)
+- [general.md](general.md), Plattform, Profil, Pseudonym
+- [message-content.md](message-content.md), erlaubte Zeichen in Chat-Nachrichten (unabhängig von UI-Sprache)
 
 ---
 
@@ -16,12 +16,14 @@ Verwandte Docs:
 | **Extension-UI** (Sidepanel, Badges, Tooltips, `aria-label`, Platzhalter) | Nutzersprache des Browsers, Fallback **en** |
 | **Mitgelieferte Locales (MVP)** | Mindestens **de** und **en**; weitere Sprachen später ohne Architektur-Bruch |
 | **TypeScript / Rust / Config** | **Englisch** (Bezeichner, Logs für Entwickler, Kommentare) |
-| **Docs unter `docs/`** | Deutsch (oder EN) — kein Muss zur UI-Sprache |
-| **User-Chat-Nachrichten** | **Nicht** übersetzen — Inhalt bleibt, wie der User tippt |
+| **Docs unter `docs/`** | Deutsch (oder EN), kein Muss zur UI-Sprache |
+| **User-Chat-Nachrichten** | **Nicht** übersetzen, Inhalt bleibt, wie der User tippt |
 | **Pseudonyme, URLs, Identity-Hex** | **Nicht** lokalisieren |
 | **Server-Reducer-Fehler** | Keine nutzerlesbaren Fehlertexte an den Client (bestehendes Muster); UI erklärt Zustände lokal |
 
 **Warum Browser-Sprache?** Kein zusätzliches Profil-Feld nötig; Verhalten entspricht Erwartung bei anderen Extensions. Optional später: manuelle Sprachwahl in den Einstellungen (Override).
+
+**Satzzeichen in UI- und Nutzertexten:** Kein Gedankenstrich (`—`). Nur Komma oder Punkt. Projektregel: [.cursor/rules/ui-copy-no-em-dash.mdc](../../.cursor/rules/ui-copy-no-em-dash.mdc).
 
 ---
 
@@ -37,8 +39,8 @@ Verwandte Docs:
 
 ### 3.1 Priorität (MVP)
 
-1. **Primär:** `navigator.languages` (bzw. `navigator.language`) in der Extension-UI — erste unterstützte Locale gewinnen.
-2. **Fallback:** `en` — wenn keine passende Locale geliefert wird oder Übersetzung fehlt.
+1. **Primär:** `navigator.languages` (bzw. `navigator.language`) in der Extension-UI, erste unterstützte Locale gewinnen.
+2. **Fallback:** `en`, wenn keine passende Locale geliefert wird oder Übersetzung fehlt.
 3. **Normalisierung:** `de-DE` → `de`, `en-US` → `en`; nur **Sprach-**Tags (kein Region-Mixing für MVP), außer wir liefern explizit `pt-BR` o. Ä.
 
 ### 3.2 Unterstützte Locales (MVP)
@@ -57,13 +59,13 @@ Weitere Locales: gleiche Schlüssel wie `en`; fehlende Keys fallen auf `en` zur�
 
 ---
 
-## 4. Extension — technische Anforderungen
+## 4. Extension, technische Anforderungen
 
 ### 4.1 Message-Katalog
 
 - Alle **nutzer sichtbaren** Strings aus Komponenten in einen **Katalog** auslagern (z. B. `extension/src/locales/en.json`, `de.json`).
-- Zugriff über eine kleine Hilfsfunktion, z. B. `t('status.connecting')` — Implementierung (eigenes Modul vs. Bibliothek) ist Team-Entscheidung; Anforderung ist **eine** API im gesamten UI-Code.
-- **Keine** String-Konkatenation für ganze Sätze mit variabler Wortstellung über Sprachen hinweg — stattdessen **parameterisierte** Messages (siehe Pluralisierung).
+- Zugriff über eine kleine Hilfsfunktion, z. B. `t('status.connecting')`, Implementierung (eigenes Modul vs. Bibliothek) ist Team-Entscheidung; Anforderung ist **eine** API im gesamten UI-Code.
+- **Keine** String-Konkatenation für ganze Sätze mit variabler Wortstellung über Sprachen hinweg, stattdessen **parameterisierte** Messages (siehe Pluralisierung).
 
 ### 4.2 Pluralisierung & Parameter
 
@@ -72,7 +74,7 @@ Beispiele aus dem Ist-Zustand, die **sprachspezifische** Regeln brauchen:
 - Online-Count: EN „1 person online“ / „N people online“; DE „1 Person online“ / „N Personen online“.
 - Rate-Limit-Hinweis mit Zahlen.
 
-Empfehlung: ICU-Message-Format (`{count, plural, ...}`) oder äquivalente Plural-API — muss für **de** und **en** korrekt sein.
+Empfehlung: ICU-Message-Format (`{count, plural, ...}`) oder äquivalente Plural-API, muss für **de** und **en** korrekt sein.
 
 ### 4.3 Fallback-Kette
 
@@ -87,7 +89,7 @@ Mindestens zu übersetzen (Stand Referenz `App.svelte`):
 - Raum-Leiste, leere Zustände, Lade-Buttons
 - Info- & Profil-Panel
 - Eingabe-Platzhalter, Senden-Button, Rate-Limit-Text
-- Später: Löschen-Bestätigung, Pagination — sobald die Features live sind, **gleicher** Katalog
+- Später: Löschen-Bestätigung, Pagination, sobald die Features live sind, **gleicher** Katalog
 
 **Nicht** übersetzen: `console.*` für Entwickler (Englisch); optional einheitlich Englisch lassen.
 
@@ -95,7 +97,7 @@ Mindestens zu übersetzen (Stand Referenz `App.svelte`):
 
 Für Chrome/Firefox-Listing:
 
-- `_locales/<lang>/messages.json` für `name`, `description`, `action` — mindestens `en` und `de`, Fallback `default_locale`: `en`.
+- `_locales/<lang>/messages.json` für `name`, `description`, `action`, mindestens `en` und `de`, Fallback `default_locale`: `en`.
 
 Sidepanel-Verhalten unabhängig davon; UI-Katalog kann dieselben Texte wiederverwenden oder getrennt pflegen.
 
@@ -146,6 +148,6 @@ Sidepanel-Verhalten unabhängig davon; UI-Katalog kann dieselben Texte wiederver
 
 ## 9. Offene Punkte
 
-- Bibliothek: lightweight eigenes Modul vs. z. B. `@formatjs/intl` — Entscheidung bei Implementierung (Bundle-Größe Extension beachten).
+- Bibliothek: lightweight eigenes Modul vs. z. B. `@formatjs/intl`, Entscheidung bei Implementierung (Bundle-Größe Extension beachten).
 - Datums-/Zeitformat in Nachrichten (falls später Timestamps in UI): `Intl.DateTimeFormat` mit aktiver Locale.
 - Landingpage (PHP): eigene i18n-Strategie, nicht Teil dieses MVP.

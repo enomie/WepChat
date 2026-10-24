@@ -1,5 +1,5 @@
 /**
- * Client-side chat window (slice) — docs/requirements/message-history-pagination.md §4.2
+ * Client-side chat window (slice), docs/requirements/message-history-pagination.md §4.2
  */
 import type { ChatMessage } from './spacetimedb/types';
 

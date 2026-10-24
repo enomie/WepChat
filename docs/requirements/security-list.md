@@ -2,16 +2,16 @@
 
 Priorisierte Maßnahmen für `server/` und `extension/`. Übergreifendes Threat Model und Secrets: [security.md](security.md).
 
-**Stand Implementierung:** §1 Rate-Limit, §6 Retention und [Message Content](message-content.md) sind live. Gotchas: [learnings.md](../learnings.md) §2, §7, §9–§11. **Send-Pfad:** kein `chat_message`-Vollscan — [server-query-patterns.md](server-query-patterns.md).
+**Stand Implementierung:** §1 Rate-Limit, §6 Retention und [Message Content](message-content.md) sind live. Gotchas: [learnings.md](../learnings.md) §2, §7, §9–§11. **Send-Pfad:** kein `chat_message`-Vollscan, [server-query-patterns.md](server-query-patterns.md).
 
 **Umsetzungsreihenfolge (aktuell):**
 
-1. **[Nachrichten-Rate-Limit (2 / Minute)](#1-nachrichten-rate-limit-2-pro-minute)** — Server + UX mit Countdown  
+1. **[Nachrichten-Rate-Limit (2 / Minute)](#1-nachrichten-rate-limit-2-pro-minute)**, Server + UX mit Countdown  
 2. Server: Längenlimits, URL-Schema, Localhost, `sender_name` aus `user_session`  
 3. Extension: SQL-Escape in Subscriptions, Localhost in `cleanUrl`  
-4. ~~**[Nachrichten-Inhalt (erlaubte Zeichen)](message-content.md)**~~ — erledigt  
-5. **[Nachrichten-Retention 72 h](#6-nachrichten-retention-72-stunden)** — Scheduled Delete **+** Cleanup-Job (nur Server)  
-6. **[Eigene Nachrichten löschen](delete-messages.md)** — Reducer `delete_own_message` (nur `ctx.sender`); Extension: Trash, `bubble own` über Identity (Anzeige weiter `sender_name`)  
+4. ~~**[Nachrichten-Inhalt (erlaubte Zeichen)](message-content.md)**~~, erledigt  
+5. **[Nachrichten-Retention 72 h](#6-nachrichten-retention-72-stunden)**, Scheduled Delete **+** Cleanup-Job (nur Server)  
+6. **[Eigene Nachrichten löschen](delete-messages.md)**, Reducer `delete_own_message` (nur `ctx.sender`); Extension: Trash, `bubble own` über Identity (Anzeige weiter `sender_name`)  
 7. Optional: Moderation-Reducer (Admin-`Identity` nur im Rust-Modul)
 
 ---
@@ -22,7 +22,7 @@ Priorisierte Maßnahmen für `server/` und `extension/`. Übergreifendes Threat 
 
 Spam und Flooding pro SpacetimeDB-`Identity` begrenzen. **Maximal 2 erfolgreiche Nachrichten** in einem **gleitenden Fenster von 60 Sekunden**.
 
-- Schutz **serverseitig** (Pflicht) — Client-Limit ist nur UX.
+- Schutz **serverseitig** (Pflicht), Client-Limit ist nur UX.
 - Für ehrliche Nutzer: klares Feedback (ausgegraut, Countdown), kein „Senden“-Klick ins Leere ohne Erklärung.
 
 `join_room` / Presence bleiben **ohne** dieses Limit (nur `send_message`).
@@ -36,9 +36,9 @@ Spam und Flooding pro SpacetimeDB-`Identity` begrenzen. **Maximal 2 erfolgreiche
 
 **Gleitendes Fenster:** Zeitpunkt `now`. Zähle Nachrichten mit `sender_identity == ctx.sender` und `created_at >= now - 60s`. Wenn Anzahl ≥ 2 → `send_message` **beendet ohne Insert** (keine neue Zeile in `chat_message`).
 
-**Abgrenzung:** 2/Min ist **bewusst kurz** (Casual-Flooding für ehrliche Clients) — **kein** Ersatz für Bot-Abwehr; längere Identity-Quotas siehe [§7](#7-bewusst-nicht-ziel).
+**Abgrenzung:** 2/Min ist **bewusst kurz** (Casual-Flooding für ehrliche Clients), **kein** Ersatz für Bot-Abwehr; längere Identity-Quotas siehe [§7](#7-bewusst-nicht-ziel).
 
-**Rate-Limit (fachlich):** **umgesetzt** — Server-Hilfstabelle `send_rate_state` (PK `identity`, `send_at_1` / `send_at_2`) + Extension-Countdown ([§1.4](#14-extension--ux-appsvelte--ggf-spacetimesveltets)). **Kein** `chat_message().iter()` auf dem Send-Pfad. Unit-Tests: `cd server && cargo test`. Geplante **Echo-Prüfung** ebenfalls nicht per Scan (`sender_room_state`, Identity + `url`, `last_text`) — [server-query-patterns.md](server-query-patterns.md).
+**Rate-Limit (fachlich):** **umgesetzt**, Server-Hilfstabelle `send_rate_state` (PK `identity`, `send_at_1` / `send_at_2`) + Extension-Countdown ([§1.4](#14-extension--ux-appsvelte--ggf-spacetimesveltets)). **Kein** `chat_message().iter()` auf dem Send-Pfad. Unit-Tests: `cd server && cargo test`. Geplante **Echo-Prüfung** ebenfalls nicht per Scan (`sender_room_state`, Identity + `url`, `last_text`), [server-query-patterns.md](server-query-patterns.md).
 
 **Nicht betroffen:** Lesen, Subscriptions, Badge-Count, Profil bearbeiten.
 
@@ -46,10 +46,10 @@ Spam und Flooding pro SpacetimeDB-`Identity` begrenzen. **Maximal 2 erfolgreiche
 
 - `is_rate_limited` / `record_rate_send` über Tabelle `send_rate_state` (PK `identity`), **vor** bzw. **nach** `insert` in `send_message`.
 - Identität: immer `ctx.sender` (nicht Client-Parameter).
-- Kein separater „Fehler-Reducer“ nötig für MVP; Client erkennt fehlgeschlagenes Senden optional daran, dass keine eigene Nachricht ankommt — deshalb **Client-Countdown parallel** (siehe unten).
+- Kein separater „Fehler-Reducer“ nötig für MVP; Client erkennt fehlgeschlagenes Senden optional daran, dass keine eigene Nachricht ankommt, deshalb **Client-Countdown parallel** (siehe unten).
 - Später: falls SpacetimeDB sichtbare Reducer-Fehler an den Client liefert, kurze Meldung „Zu schnell“ anzeigen.
 
-### 1.4 Extension — UX (`App.svelte` + ggf. `spacetime.svelte.ts`)
+### 1.4 Extension, UX (`App.svelte` + ggf. `spacetime.svelte.ts`)
 
 #### Zustände Eingabezeile
 
@@ -63,7 +63,7 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 
 #### Countdown
 
-- Nach jedem **lokal erfolgreichen** `sendMessage`-Aufruf (Reducer ohne Throw): Zeitstempel in einer kleinen Liste (max. 2 relevante Einträge im 60s-Fenster) führen — z. B. in `spacetime.svelte.ts` oder dediziert `rate-limit.svelte.ts`.
+- Nach jedem **lokal erfolgreichen** `sendMessage`-Aufruf (Reducer ohne Throw): Zeitstempel in einer kleinen Liste (max. 2 relevante Einträge im 60s-Fenster) führen, z. B. in `spacetime.svelte.ts` oder dediziert `rate-limit.svelte.ts`.
 - `cooldownRemainingMs = max(0, 60_000 - (now - oldestSendInWindow))` wenn bereits 2 Sends im Fenster, sonst `0`.
 - **Anzeige** (eine Variante reicht, konsistent im Footer):
   - Hilfetext unter dem Input: *„Nächste Nachricht in 42 s“*, oder
@@ -75,7 +75,7 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 #### Abgleich mit Server
 
 - Client-Limit **spiegelt** die Server-Regel (2/60s), damit Nutzer selten in den „stille abgelehnt“-Fall laufen.
-- Wer die Extension umgeht, wird nur serverseitig begrenzt — akzeptabel.
+- Wer die Extension umgeht, wird nur serverseitig begrenzt, akzeptabel.
 
 #### Barrierefreiheit / Copy
 
@@ -90,7 +90,7 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 | UI (disabled, Placeholder, Button-Label) | [App.svelte](../../extension/src/App.svelte) |
 | `recordSend` nach Reducer | [spacetime.svelte.ts](../../extension/src/lib/spacetime.svelte.ts) |
 
-**Svelte 5:** `cooldownRemainingMs()` darf in `$derived` **kein** `$state` mutieren — nur lesend filtern; `prune()` nur bei Send/Tick. Siehe [learnings.md](../learnings.md#7-svelte-5-rate-limit-und-state_unsafe_mutation).
+**Svelte 5:** `cooldownRemainingMs()` darf in `$derived` **kein** `$state` mutieren, nur lesend filtern; `prune()` nur bei Send/Tick. Siehe [learnings.md](../learnings.md#7-svelte-5-rate-limit-und-state_unsafe_mutation).
 
 ### 1.5 Akzeptanzkriterien
 
@@ -101,28 +101,28 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 
 ### 1.6 Testideen (manuell)
 
-1. Zwei Nachrichten schnell hintereinander **im Sidepanel (gleiche Identity)** → dritter Versuch: UI blockiert, Server nimmt nicht an. (`spacetime call --anonymous` nutzt pro Aufruf oft eine neue Identity — dafür ungeeignet.)  
+1. Zwei Nachrichten schnell hintereinander **im Sidepanel (gleiche Identity)** → dritter Versuch: UI blockiert, Server nimmt nicht an. (`spacetime call --anonymous` nutzt pro Aufruf oft eine neue Identity, dafür ungeeignet.)  
 2. 61 s warten → wieder sendbar.  
 3. Tab wechseln / URL wechseln → Cooldown **global pro Identity** (nicht pro URL), gleiches Verhalten.  
-4. Disconnect/Reconnect: Server zählt weiter über `send_rate_state`; Client-Timer nach Reload ggf. zurückgesetzt — Nutzer kann kurz UI „frei“ sehen, Server lehnt trotzdem ab (akzeptabel für MVP).  
+4. Disconnect/Reconnect: Server zählt weiter über `send_rate_state`; Client-Timer nach Reload ggf. zurückgesetzt, Nutzer kann kurz UI „frei“ sehen, Server lehnt trotzdem ab (akzeptabel für MVP).  
 5. Nach zwei Sends: Zeile in `send_rate_state` für die Identity (Dashboard/SQL). `identity_disconnected` löscht die Zeile.
 
 **Automatisiert:** `cd server && cargo test` (Fenster-Logik, siehe `rate_window_tests` in `lib.rs`).
 
 ---
 
-## 2. Server — weitere Härtung (Backlog)
+## 2. Server, weitere Härtung (Backlog)
 
 | Maßnahme | Problem heute | Idee |
 |----------|----------------|------|
-| **Längenlimits** | URL noch offen | Username **13**, Text **400** ✓ — [message-content.md §3.1](message-content.md#31-maximale-länge-zeichen); URL ≤ 2 KB Backlog |
+| **Längenlimits** | URL noch offen | Username **13**, Text **400** ✓, [message-content.md §3.1](message-content.md#31-maximale-länge-zeichen); URL ≤ 2 KB Backlog |
 | **Username normalisieren** | Unicode/Steuerzeichen | `trim()`, Whitelist ([ideas.md](../kickoff/ideas.md)) |
 | **Nur `http`/`https`** | Exotische Schemes | Prefix-Check |
 | **Localhost blocken** | Interne URLs als Raum | `localhost`, `127.0.0.1`, `::1`, private IPs |
 | **`send_message`: Anzeigename vom Server** | Impersonation via `username` | `sender_name` aus `user_session` für `ctx.sender` |
 | **Text-Policy** | erledigt | [message-content.md](message-content.md) |
-| **Link-/Domain-Limits** (Regex, max. 1 Link) | Affiliate/Phishing-URLs im Text | **Nicht separat** — erledigt über Zeichen-Whitelist (`:` `/` `@` … verboten): [message-content.md §8](message-content.md#8-links-domains-kein-link-regex) |
-| **`chat_message`-Scans in Reducern** | `iter()` skaliert mit Gesamtbestand | Rate-Limit: **`send_rate_state`** ✓; Purge/Echo noch offen — [server-query-patterns.md](server-query-patterns.md), [learnings.md §11](../learnings.md#11-kein-chat_message-vollscan-in-reducern) |
+| **Link-/Domain-Limits** (Regex, max. 1 Link) | Affiliate/Phishing-URLs im Text | **Nicht separat**, erledigt über Zeichen-Whitelist (`:` `/` `@` … verboten): [message-content.md §8](message-content.md#8-links-domains-kein-link-regex) |
+| **`chat_message`-Scans in Reducern** | `iter()` skaliert mit Gesamtbestand | Rate-Limit: **`send_rate_state`** ✓; Purge/Echo noch offen, [server-query-patterns.md](server-query-patterns.md), [learnings.md §11](../learnings.md#11-kein-chat_message-vollscan-in-reducern) |
 | **B-Tree auf `chat_message`** | Subscriptions / Purge | `url`, `created_at` (Rust `#[index(btree)]`); Purge per Range statt Vollscan |
 
 Retention 72 h: eigene Spezifikation in [Abschnitt 6](#6-nachrichten-retention-72-stunden).
@@ -136,7 +136,7 @@ const MAX_USERNAME_LEN: usize = 13;
 
 ---
 
-## 3. Extension — Verteidigung in der Tiefe (Backlog)
+## 3. Extension, Verteidigung in der Tiefe (Backlog)
 
 | Maßnahme | Ort | Anmerkung |
 |----------|-----|-----------|
@@ -146,7 +146,7 @@ const MAX_USERNAME_LEN: usize = 13;
 | **Identity-Token** | `spacetime.svelte.ts` | Optional `storage.local` für stabile Identity |
 | **Subscriptions** | `subscribeToUrl` | Alte Subscription beim URL-Wechsel beenden |
 
-Alles hier ist **umgehbar** — Server-Regeln aus Abschnitt 2 bleiben maßgeblich.
+Alles hier ist **umgehbar**, Server-Regeln aus Abschnitt 2 bleiben maßgeblich.
 
 ---
 
@@ -165,7 +165,7 @@ Alles hier ist **umgehbar** — Server-Regeln aus Abschnitt 2 bleiben maßgeblic
 
 Nachrichten in `chat_message` dürfen **höchstens 72 Stunden** auf dem Server existieren. Danach sind sie **physisch gelöscht** (nicht nur in der UI ausgeblendet).
 
-- **Zwei Server-Mechanismen parallel** — damit die Datenbank auch bei Scheduler-Aussetzern oder Alt-Bestand **zuverlässig sauber** bleibt.
+- **Zwei Server-Mechanismen parallel**, damit die Datenbank auch bei Scheduler-Aussetzern oder Alt-Bestand **zuverlässig sauber** bleibt.
 - **Extension:** unverändert volle URL-Subscription; Löschungen kommen über bestehende Table-Callbacks (`onDelete`) bzw. Subscription-Updates.
 
 Referenz Implementierung: [spacetimedb.md](../kickoff/spacetimedb.md) (Kurzfassung). Produktidee: [ideas.md](../kickoff/ideas.md).
@@ -179,11 +179,11 @@ Referenz Implementierung: [spacetimedb.md](../kickoff/spacetimedb.md) (Kurzfassu
 
 `MESSAGE_RETENTION` als eine Quelle im Rust-Modul (z. B. `Duration` aus Stunden), von A und B gemeinsam genutzt.
 
-### 6.3 Mechanismus A — Scheduled Delete pro Nachricht
+### 6.3 Mechanismus A, Scheduled Delete pro Nachricht
 
 SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 
-**Tabelle:** `delete_message_schedule` mit `scheduled(delete_message)` — Felder `scheduled_id`, `scheduled_at: ScheduleAt`, `message_id`.
+**Tabelle:** `delete_message_schedule` mit `scheduled(delete_message)`, Felder `scheduled_id`, `scheduled_at: ScheduleAt`, `message_id`.
 
 **Trigger:** Erfolgreiches `insert` in `send_message` → `schedule_message_deletion` legt eine Zeile an mit `scheduled_at: (created_at + 72h).into()` (einmaliger Lauf).
 
@@ -191,15 +191,15 @@ SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 
 **Effekt:** Löschung nahe am 72h-Zeitpunkt; verbundene Clients sehen das Delete in Echtzeit (`onDelete` in [spacetime.svelte.ts](../../extension/src/lib/spacetime.svelte.ts)).
 
-### 6.4 Mechanismus B — Wiederkehrender Cleanup
+### 6.4 Mechanismus B, Wiederkehrender Cleanup
 
-**Tabelle:** `purge_expired_schedule` mit `scheduled(purge_expired_messages)` — Intervall-Job via `scheduled_at: cleanup_interval().into()` (`TimeDuration` → wiederholender Lauf alle **15 Min**).
+**Tabelle:** `purge_expired_schedule` mit `scheduled(purge_expired_messages)`, Intervall-Job via `scheduled_at: cleanup_interval().into()` (`TimeDuration` → wiederholender Lauf alle **15 Min**).
 
 **Reducer `purge_expired_messages`:** Scheduler-only; `cutoff = ctx.timestamp - 72h`; alle älteren `chat_message` löschen.
 
 **Bootstrap:** `#[reducer(init)]` plus `ensure_purge_job` in `join_room` / `send_message` (bestehende DBs ohne erneutes `init` nach Publish-Upgrade).
 
-**Effekt:** Sicherheitsnetz — spätestens ~15 Min nach Ablauf der 72h, falls Einzel-Timer fehlt; räumt Alt-Bestand auf.
+**Effekt:** Sicherheitsnetz, spätestens ~15 Min nach Ablauf der 72h, falls Einzel-Timer fehlt; räumt Alt-Bestand auf.
 
 ### 6.5 Zusammenspiel A + B
 
@@ -210,7 +210,7 @@ SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 | B löscht früher (Batch) | A-Lauf später: `delete_message` noop |
 | Doppel-Löschung | Idempotent, kein Fehler nötig |
 
-**Kein Mechanismus C:** Subscription mit `created_at > …` in der Extension — **nicht** Teil der Retention-Policy (würde Server-Daten und SQL-Abfragen unverändert lassen).
+**Kein Mechanismus C:** Subscription mit `created_at > …` in der Extension, **nicht** Teil der Retention-Policy (würde Server-Daten und SQL-Abfragen unverändert lassen).
 
 ### 6.6 Extension (`extension/`)
 
@@ -221,7 +221,7 @@ SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 ### 6.7 Akzeptanzkriterien
 
 - [x] A + B in [server/src/lib.rs](../../server/src/lib.rs); publiziert als Modul `wepchat`.
-- [ ] Nachricht älter als 72 h existiert **nicht** mehr in `chat_message` (Dashboard/SQL) — *Langzeittest oder Dev-Modul mit verkürzter Retention*.
+- [ ] Nachricht älter als 72 h existiert **nicht** mehr in `chat_message` (Dashboard/SQL), *Langzeittest oder Dev-Modul mit verkürzter Retention*.
 - [x] A: Jede neu gesendete Nachricht erzeugt einen Eintrag in `delete_message_schedule`.
 - [x] B: `purge_expired_schedule` wird via `ensure_purge_job` befüllt; Intervall-Reducer aktiv.
 - [x] Verbunde Clients: Delete-Event in `onDelete` implementiert.
@@ -229,10 +229,10 @@ SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 
 ### 6.8 Testideen
 
-1. Testnachricht senden, `created_at` in Testumgebung verkürzen (nur dev) oder Wartezeit — Zeile weg nach Retention.  
-2. `delete_message` manuell für existierende ID — Subscription aktualisiert.  
-3. Zeile manuell mit altem `created_at` einfügen (dev) — nächster `purge_expired_messages` entfernt sie.  
-4. Doppelaufruf `delete_message` — kein Crash.
+1. Testnachricht senden, `created_at` in Testumgebung verkürzen (nur dev) oder Wartezeit, Zeile weg nach Retention.  
+2. `delete_message` manuell für existierende ID, Subscription aktualisiert.  
+3. Zeile manuell mit altem `created_at` einfügen (dev), nächster `purge_expired_messages` entfernt sie.  
+4. Doppelaufruf `delete_message`, kein Crash.
 
 ---
 
@@ -242,5 +242,5 @@ SpacetimeDB 1.x: **Scheduled Table** (nicht `ctx.schedule`).
 - Rate-Limit nur im UI ohne Server
 - `public` Tabellen komplett abschalten
 - **Retention nur im Client** (Subscription-Filter ohne Server-Delete)
-- **Link-Erkennung per Regex** oder **max. N Links pro Nachricht** — **bewusst nicht**; Link-/Domain-Dropping im Chat-Text über [Message Content §8](message-content.md#8-links-domains-kein-link-regex) (Whitelist ohne `:` und `/`, kein URL-Parser).
-- **Identity-basierte Langzeit-Quotas** (z. B. 100 Nachrichten / 72 h pro URL und `ctx.sender`) — **verworfen** ([ideas.md](../kickoff/ideas.md)). SpacetimeDB-`Identity` ist an das lokale Token in der Extension gebunden; Angreifer rotieren per `chrome.storage` / neuem Profil — Zähler steht wieder auf 0. Trifft vor allem normale Power-User, kaum Skript-Spam. **Nicht** dasselbe wie [Retention §6](#6-nachrichten-retention-72-stunden) (löscht Nachrichten für **alle** nach 72 h) oder [2/Min §1](#1-nachrichten-rate-limit-2-pro-minute) (kurzes Fenster, gleiche Identity-Schwäche, aber geringe Belastung für Normalnutzer). Ausführlich: [learnings.md §10](../learnings.md#10-identity-limits-und-spam).
+- **Link-Erkennung per Regex** oder **max. N Links pro Nachricht**, **bewusst nicht**; Link-/Domain-Dropping im Chat-Text über [Message Content §8](message-content.md#8-links-domains-kein-link-regex) (Whitelist ohne `:` und `/`, kein URL-Parser).
+- **Identity-basierte Langzeit-Quotas** (z. B. 100 Nachrichten / 72 h pro URL und `ctx.sender`), **verworfen** ([ideas.md](../kickoff/ideas.md)). SpacetimeDB-`Identity` ist an das lokale Token in der Extension gebunden; Angreifer rotieren per `chrome.storage` / neuem Profil, Zähler steht wieder auf 0. Trifft vor allem normale Power-User, kaum Skript-Spam. **Nicht** dasselbe wie [Retention §6](#6-nachrichten-retention-72-stunden) (löscht Nachrichten für **alle** nach 72 h) oder [2/Min §1](#1-nachrichten-rate-limit-2-pro-minute) (kurzes Fenster, gleiche Identity-Schwäche, aber geringe Belastung für Normalnutzer). Ausführlich: [learnings.md §10](../learnings.md#10-identity-limits-und-spam).

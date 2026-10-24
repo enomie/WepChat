@@ -24,6 +24,7 @@
     RATE_LIMIT_MAX_SENDS,
     RATE_LIMIT_WINDOW_MS,
   } from './lib/rate-limit.svelte';
+  import { NICK_COLORS, nickColorStyles, normalizeNickColorId } from './lib/nick-colors';
 
   const rateLimitWindowMinutes = RATE_LIMIT_WINDOW_MS / 60_000;
 
@@ -48,14 +49,15 @@
   const cooldownSecs = $derived(Math.ceil(cooldownMs / 1000));
   const rateLimited = $derived(cooldownMs > 0);
 
-  // Subscribe to room when URL, username, and connection are ready
+  // Subscribe to room when URL, profile, and connection are ready
   $effect(() => {
     const url = urlState.current;
     const username = profileState.current.username;
+    const nickColorId = profileState.current.nickColorId;
     const connected = spacetimeChat.current.connected;
 
     if (url && username && connected) {
-      spacetimeChat.subscribeToUrl(url, username);
+      spacetimeChat.subscribeToUrl(url, username, nickColorId);
     }
   });
 
@@ -138,6 +140,26 @@
     profileState.setUsername(filtered);
   }
 
+  function selectNickColor(id: number) {
+    profileState.setNickColorId(id);
+  }
+
+  function handleColorSwatchKeydown(e: KeyboardEvent, index: number) {
+    const cols = 3;
+    let next = index;
+    if (e.key === 'ArrowRight') next = Math.min(NICK_COLORS.length - 1, index + 1);
+    else if (e.key === 'ArrowLeft') next = Math.max(0, index - 1);
+    else if (e.key === 'ArrowDown') next = Math.min(NICK_COLORS.length - 1, index + cols);
+    else if (e.key === 'ArrowUp') next = Math.max(0, index - cols);
+    else return;
+    e.preventDefault();
+    const target = NICK_COLORS[next];
+    if (!target) return;
+    selectNickColor(target.id);
+    const el = document.getElementById(`nick-color-${target.id}`);
+    el?.focus();
+  }
+
   function handleSend() {
     const url = urlState.current;
     const username = profileState.current.username;
@@ -207,10 +229,22 @@
     <div class="info-panel">
       <p><strong>{t('info.title')}</strong></p>
       <ul>
-        <li>{t('info.bullet1')}</li>
-        <li>{t('info.bullet2')}</li>
-        <li>{t('info.bullet3')}</li>
+        <li>{t('info.safety1')}</li>
+        <li>{t('info.safety2')}</li>
+        <li>{t('info.safety3')}</li>
+        <li>{t('info.safety4')}</li>
+        <li>{t('info.safety5')}</li>
+        <li>{t('info.safety6')}</li>
       </ul>
+      <p class="info-faq-heading"><strong>{t('info.faqTitle')}</strong></p>
+      <ul>
+        <li>{t('info.faq1')}</li>
+        <li>{t('info.faq2')}</li>
+        <li>{t('info.faq3')}</li>
+        <li>{t('info.faq4')}</li>
+        <li>{t('info.faq5')}</li>
+      </ul>
+      <p class="info-contact">{t('info.contact')}</p>
     </div>
   {/if}
 
@@ -231,6 +265,27 @@
           })}
         </p>
       {/if}
+      <span id="nick-color-label" class="color-label">{t('settings.colorLabel')}</span>
+      <div
+        class="color-swatches"
+        role="radiogroup"
+        aria-labelledby="nick-color-label"
+      >
+        {#each NICK_COLORS as color, i (color.id)}
+          <button
+            id="nick-color-{color.id}"
+            type="button"
+            class="color-swatch"
+            class:selected={profileState.current.nickColorId === color.id}
+            role="radio"
+            aria-checked={profileState.current.nickColorId === color.id}
+            aria-label={t(`settings.colors.${color.key}`)}
+            style="--swatch: {color.hex}"
+            onclick={() => selectNickColor(color.id)}
+            onkeydown={(e) => handleColorSwatchKeydown(e, i)}
+          ></button>
+        {/each}
+      </div>
       {#if spacetimeChat.current.error}
         <p class="err-detail">{connectionErrorMessage(spacetimeChat.current.error)}</p>
       {/if}
@@ -255,8 +310,12 @@
         </button>
       {/if}
       {#each visibleMessages as msg (msg.id)}
-        <div class="bubble {msg.senderName === profileState.current.username ? 'own' : ''}">
-          <span class="sender">{msg.senderName}</span>
+        {@const nickStyles = nickColorStyles(normalizeNickColorId(msg.senderNickColor))}
+        <div
+          class="bubble {msg.senderName === profileState.current.username ? 'own' : ''}"
+          style:background={nickStyles.bubbleBackground}
+        >
+          <span class="sender" style:color={nickStyles.senderColor}>{msg.senderName}</span>
           <span class="text">{msg.text}</span>
         </div>
       {/each}
@@ -380,6 +439,15 @@
     margin: 0 0 6px;
   }
 
+  .info-panel .info-faq-heading {
+    margin-top: 10px;
+  }
+
+  .info-panel .info-contact {
+    margin: 10px 0 0;
+    color: #334155;
+  }
+
   .info-panel ul {
     margin: 0;
     padding-left: 1.1rem;
@@ -420,6 +488,36 @@
     font-size: 0.82rem;
   }
   .identity { margin: 6px 0 0; font-size: 0.7rem; color: #854d0e; }
+  .color-label {
+    display: block;
+    margin-top: 10px;
+    font-weight: 600;
+    color: #64748b;
+  }
+  .color-swatches {
+    display: grid;
+    grid-template-columns: repeat(3, 32px);
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .color-swatch {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: var(--swatch);
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px #fff;
+  }
+  .color-swatch.selected {
+    border-color: #334155;
+    box-shadow: inset 0 0 0 2px #fff, 0 0 0 1px #334155;
+  }
+  .color-swatch:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
   .err-detail { margin: 4px 0 0; font-size: 0.7rem; color: #ef4444; word-break: break-all; }
 
   .messages {
@@ -458,7 +556,6 @@
   }
 
   .bubble {
-    background: #f1f5f9;
     padding: 8px 12px;
     border-radius: 10px;
     max-width: 82%;
@@ -466,14 +563,12 @@
     word-break: break-word;
   }
   .bubble.own {
-    background: #dbeafe;
     align-self: flex-end;
   }
   .sender {
     display: block;
     font-size: 0.7rem;
     font-weight: 600;
-    color: #475569;
     margin-bottom: 2px;
   }
   .text { font-size: 0.84rem; line-height: 1.35; }

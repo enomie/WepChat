@@ -13,7 +13,7 @@ Das ist ein sauberes Setup! Der Build im `extension/`-Ordner ist ohne Fehler dur
 
 
 3. **Web (`WepChat/web`):**
-* **PHP-Landingpage:** Platzhalter für Impressum, Datenschutz und Infos zum Plugin.
+* **PHP-Landingpage:** Platzhalter für Impressum, Datenschutz und Infos zum Plugin. Offizieller Kontakt: wepchat@proton.me
 
 
 

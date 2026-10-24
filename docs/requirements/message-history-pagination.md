@@ -14,10 +14,10 @@ Verwandt: [general.md](general.md), [security-list.md §6](security-list.md#6-na
 |-----------|-----------|
 | Extension öffnen / Raum laden | Zuerst nur die **neuesten 100** Nachrichten dieses Raums (URL nach `cleanUrl`) |
 | Anordnung | **Älteste oben, neueste unten** (klassischer Chat); beim Öffnen **nach unten** scrollen (neueste sichtbar) |
-| Nach oben scrollen | Am oberen Rand: **„Ältere Nachrichten laden“** (Button oder klickbarer Streifen) — **nicht** automatisch ohne Nutzeraktion (vermeidet Scroll-Sprünge beim versehentlichen Overscroll) |
+| Nach oben scrollen | Am oberen Rand: **„Ältere Nachrichten laden“** (Button oder klickbarer Streifen), **nicht** automatisch ohne Nutzeraktion (vermeidet Scroll-Sprünge beim versehentlichen Overscroll) |
 | Klick „Ältere laden“ | Weitere **100** ältere Nachrichten **oben einfügen**; Scrollposition **stabil** halten (Nutzer bleibt auf derselben Bubble) |
 | Wieder oben | Wenn es noch ältere gibt → gleicher Button erneut; wenn nicht → Hinweis *„Keine älteren Nachrichten“* oder Button ausblenden |
-| Neue Nachrichten (Echtzeit) | Kommen weiterhin **unten** an (`onInsert`), auch wenn nur ein Fenster geladen ist — Nutzer im aktuellen Verlauf sieht sie sofort |
+| Neue Nachrichten (Echtzeit) | Kommen weiterhin **unten** an (`onInsert`), auch wenn nur ein Fenster geladen ist, Nutzer im aktuellen Verlauf sieht sie sofort |
 
 **Konstante (Vorschlag):** `MESSAGE_PAGE_SIZE = 100`.
 
@@ -36,7 +36,7 @@ Das skaliert schlecht in beliebten Räumen (viele Nachrichten innerhalb von 72�
 
 ### 3.1 Sortierung & Identität der „Seite“
 
-- Sortierung stabil nach **`id`** (monoton steigend, entspricht grob Sende-Reihenfolge) — gleiche Logik wie heute `sort((a,b) => Number(a.id) - Number(b.id))`.
+- Sortierung stabil nach **`id`** (monoton steigend, entspricht grob Sende-Reihenfolge), gleiche Logik wie heute `sort((a,b) => Number(a.id) - Number(b.id))`.
 - **Ältere Seite** = Nachrichten mit **`id` kleiner** als die aktuell **älteste geladene** `id` im UI-State.
 - Raum-Schlüssel: normalisierte **`url`** (wie `join_room` / `send_message`).
 
@@ -62,8 +62,8 @@ Das skaliert schlecht in beliebten Räumen (viele Nachrichten innerhalb von 72�
 
 Zwei getrennte Datenpfade:
 
-1. **Live-Tail:** Subscription (oder gefilterte Subscription) für **neue** Nachrichten im Raum — z. B. `id > newestLoadedId` nach initialem Laden, oder weiterhin volle URL-Subscription mit Client-Filter (einfacher MVP, mehr Traffic).
-2. **Historie:** Explizites Nachladen älterer Seiten per **SQL** (HTTP-SQL wie im Badge oder zweite Subscription / einmalige Abfrage — SDK-Fähigkeiten beim Umsetzen prüfen):
+1. **Live-Tail:** Subscription (oder gefilterte Subscription) für **neue** Nachrichten im Raum, z. B. `id > newestLoadedId` nach initialem Laden, oder weiterhin volle URL-Subscription mit Client-Filter (einfacher MVP, mehr Traffic).
+2. **Historie:** Explizites Nachladen älterer Seiten per **SQL** (HTTP-SQL wie im Badge oder zweite Subscription / einmalige Abfrage, SDK-Fähigkeiten beim Umsetzen prüfen):
 
 ```sql
 -- Neueste 100 (Initial)
@@ -77,9 +77,9 @@ Ergebnis jeweils **aufsteigend sortieren** für die UI (älteste oben).
 
 **Vorteil:** Weniger Daten über WebSocket (theoretisch).
 
-**Warum nicht für WepChat (Entscheidung):** SpacetimeDB-Views sind keine parametrisierte RPC; dynamisches Resubscribe mit `id >= …` erzeugt Snapshot/Live-Races; bei **72h-Retention** ist der Raum-Bestand typischerweise überschaubar — der Aufwand lohnt sich nicht vor messbarem Bedarf.
+**Warum nicht für WepChat (Entscheidung):** SpacetimeDB-Views sind keine parametrisierte RPC; dynamisches Resubscribe mit `id >= …` erzeugt Snapshot/Live-Races; bei **72h-Retention** ist der Raum-Bestand typischerweise überschaubar, der Aufwand lohnt sich nicht vor messbarem Bedarf.
 
-### 4.2 Client-Fenster (Slice) — **Implementierungsweg**
+### 4.2 Client-Fenster (Slice), **Implementierungsweg**
 
 Volle Subscription `WHERE url = '…'` (unverändert). `state.messages` enthält den Raum-Cache (sortiert nach `id`). Die UI rendert nur `messages.slice(-visibleLimit)` mit `visibleLimit` start **100**; „Ältere laden“ erhöht `visibleLimit` um 100 (synchron, Daten bereits im Speicher).
 
@@ -102,7 +102,7 @@ Umsetzung: [message-history-pagination.plan.md](../../.cursor/plans/message-hist
   - `hasOlder === true` → Button *„Ältere Nachrichten laden“* (optional: „(100)“).
   - `loadingOlder` → disabled + *„Laden…“*.
   - `hasOlder === false` → kein Button oder dezenter Text *„Beginn des Verlaufs“*.
-- Optional später: zusätzlich Button zeigen, wenn `scrollTop < Schwellwert` (z. B. 80 px) — **Klick** bleibt Pflicht zum Laden (kein endloses Auto-Load beim Scroll).
+- Optional später: zusätzlich Button zeigen, wenn `scrollTop < Schwellwert` (z. B. 80 px), **Klick** bleibt Pflicht zum Laden (kein endloses Auto-Load beim Scroll).
 
 ### 5.2 Scroll-Anker beim Prepended
 
@@ -111,7 +111,7 @@ Beim Einfügen von N Nachrichten **oben**:
 - Vorher `scrollHeight` und `scrollTop` speichern.
 - Nach DOM-Update: `scrollTop = newScrollHeight - oldScrollHeight + oldScrollTop` (oder `scrollIntoView` auf der zuvor obersten sichtbaren Bubble).
 
-Ohne Anker springt die Ansicht — schlechte UX.
+Ohne Anker springt die Ansicht, schlechte UX.
 
 ### 5.3 Auto-Scroll unten
 
@@ -136,7 +136,7 @@ Implementierung (§4.2) in `spacetime.svelte.ts` / `message-history.svelte.ts`:
 
 ## 7. Sicherheit & SQL
 
-- **`url` escapen** in Subscriptions/SQL (wie Backlog [security-list §3](security-list.md#3-extension--verteidigung-in-der-tiefe-backlog)) — `'` in URLs.
+- **`url` escapen** in Subscriptions/SQL (wie Backlog [security-list §3](security-list.md#3-extension--verteidigung-in-der-tiefe-backlog)), `'` in URLs.
 - Keine neuen Server-Reducer nötig für reine Lese-Pagination, sofern öffentliche `chat_message` + SQL ausreichen.
 
 ---
@@ -155,7 +155,7 @@ Implementierung (§4.2) in `spacetime.svelte.ts` / `message-history.svelte.ts`:
 1. Dev-Raum mit 250 Testnachrichten (oder Script) → initial 100, zwei Mal „Ältere laden“ → 250 sichtbar, Button weg.
 2. Während oben gelesen wird: neue Nachricht unten → kein erzwungener Sprung nach unten.
 3. URL mit `'` im Pfad (falls erlaubt) → kein SQL-Bruch.
-4. Nach 72 h Retention: älteste Seiten verschwinden serverseitig — „Beginn des Verlaufs“ ohne Fehler.
+4. Nach 72 h Retention: älteste Seiten verschwinden serverseitig, „Beginn des Verlaufs“ ohne Fehler.
 
 ---
 

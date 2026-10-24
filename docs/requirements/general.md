@@ -38,11 +38,13 @@
 ### 3. Benutzer-Profil & Datenschutz
 
 * **Unabhängig von Drittanbietern:** Keine Pflicht zur Registrierung via Google oder Social Logins.
-* **Lokale Datenspeicherung:** Profildaten (Pseudonym, Farb-Tag/Avatar) liegen ausschließlich im lokalen Speicher des Browsers (`chrome.storage.local`).
+* **Lokale Datenspeicherung:** Profildaten (Pseudonym, Nick-Farbe) liegen im lokalen Speicher des Browsers (`chrome.storage.local`).
 * **Frei anpassbar:** Automatische Generierung eines zufälligen Pseudonyms (z. B. `Anon8392`), das der User im Plugin-Interface jederzeit überschreiben kann.
+* **Nick-Farbe:** Eine von **9 festen Palettenfarben** (Default Blau), Swatch-Picker in den Einstellungen; Sync über `join_room`, Snapshot pro Nachricht auf dem Server, [nickname-appearance.md](nickname-appearance.md).
 * **Anonymität:** Anonyme Identifikation gegenüber dem Server über zufällig generierte Verbindungsschlüssel (SpacetimeDB Identity).
-* **Sicherheit & Secrets:** Welche Zugangsdaten in die Extension dürfen (und welche nicht) — siehe [security.md](security.md).
-* **Chat & Pseudonym — erlaubte Zeichen:** Buchstaben (inkl. Umlaute), Ziffern, Leerzeichen, nur `,` `.` `-`; Filter beim Tippen + Server — [message-content.md](message-content.md).
+* **Sicherheit & Secrets:** Welche Zugangsdaten in die Extension dürfen (und welche nicht), siehe [security.md](security.md).
+* **Chat & Pseudonym, erlaubte Zeichen:** Buchstaben (inkl. Umlaute), Ziffern, Leerzeichen, nur `,` `.` `-`; Filter beim Tippen + Server, [message-content.md](message-content.md).
+* **Kontakt:** Offizielle E-Mail für Support, Datenschutz und rechtliche Anfragen: wepchat@proton.me
 
 ---
 
@@ -57,8 +59,8 @@
 
 ### 5. Was fehlt noch? / Mögliche Zukunftsanforderungen ("Was noch?")
 
-* **Historie & Inaktivität:** Nachrichten werden nach **72 h** serverseitig gelöscht — [security-list.md](security-list.md#6-nachrichten-retention-72-stunden). **Sidepanel:** Client-Fenster (neueste 100, „Ältere laden“) — [message-history-pagination.md](message-history-pagination.md).
+* **Historie & Inaktivität:** Nachrichten werden nach **72 h** serverseitig gelöscht, [security-list.md](security-list.md#6-nachrichten-retention-72-stunden). **Sidepanel:** Client-Fenster (neueste 100, „Ältere laden“), [message-history-pagination.md](message-history-pagination.md).
 * **Moderation & Safety:** Bad-Word-Filter, User-Muting oder Meldefunktionen für unangemessene Nachrichten im Backend.
 * **Benachrichtigungen:** Unaufdringliche Indikatoren (z. B. kleiner Badge am Extension-Icon), wenn auf der aktuellen Seite aktiv gechattet wird.
 * **Domain-weite Räume (Optionaler Tab):** Neben dem Raum für die *exakte URL* könnte ein zweiter Tab für die gesamte Domain existieren (z. B. Chat für ganz `amazon.de`).
-* **Internationalisierung:** UI nach Browsersprache (**de** + **en** im MVP, Fallback **en**); Code/Kommentare Englisch — [internationalization.md](internationalization.md).
+* **Internationalisierung:** UI nach Browsersprache (**de** + **en** im MVP, Fallback **en**); Code/Kommentare Englisch, [internationalization.md](internationalization.md).
