@@ -6,6 +6,8 @@ use spacetimedb::{
 };
 
 const MAX_MESSAGES_PER_WINDOW: u32 = 2;
+const MAX_USERNAME_LEN: usize = 13;
+const MAX_MESSAGE_TEXT_LEN: usize = 400;
 
 fn rate_window() -> TimeDuration {
     TimeDuration::from_micros(60 * 1_000_000)
@@ -81,6 +83,10 @@ fn char_allowed(c: char) -> bool {
 
 fn text_is_allowed(s: &str) -> bool {
     s.chars().all(char_allowed)
+}
+
+fn within_char_limit(s: &str, max: usize) -> bool {
+    s.chars().count() <= max
 }
 
 fn normalize_allowed_text(s: &str) -> String {
@@ -253,7 +259,7 @@ pub fn join_room(ctx: &ReducerContext, url: String, username: String) {
         return;
     }
     let normalized_username = normalize_allowed_text(&clean_username);
-    if normalized_username.is_empty() {
+    if normalized_username.is_empty() || !within_char_limit(&normalized_username, MAX_USERNAME_LEN) {
         return;
     }
 
@@ -293,7 +299,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         return;
     }
     let normalized_text = normalize_allowed_text(&clean_text);
-    if normalized_text.is_empty() {
+    if normalized_text.is_empty() || !within_char_limit(&normalized_text, MAX_MESSAGE_TEXT_LEN) {
         return;
     }
 
@@ -302,7 +308,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
         return;
     }
     let normalized_username = normalize_allowed_text(&clean_username);
-    if normalized_username.is_empty() {
+    if normalized_username.is_empty() || !within_char_limit(&normalized_username, MAX_USERNAME_LEN) {
         return;
     }
 

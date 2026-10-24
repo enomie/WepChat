@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "WepChat - URL Chat & Presence"
+  },
+  "extDescription": {
+    "message": "Real-time chat and presence per page URL"
+  },
+  "actionTitle": {
+    "message": "Open WepChat side panel"
+  },
+  "sidebarTitle": {
+    "message": "WepChat"
+  }
+}

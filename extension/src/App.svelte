@@ -4,7 +4,12 @@
   import { profileState } from './lib/profile.svelte';
   import { spacetimeChat } from './lib/spacetime.svelte';
   import { rateLimitState } from './lib/rate-limit.svelte';
-  import { filterMessageInput, prepareMessageForSend } from './lib/message-text-policy';
+  import {
+    filterMessageInput,
+    MAX_MESSAGE_LENGTH,
+    MAX_USERNAME_LENGTH,
+    prepareMessageForSend,
+  } from './lib/message-text-policy';
   import {
     applyScrollAnchorAfterPrepend,
     hasOlderMessages,
@@ -14,6 +19,13 @@
   import { tick } from 'svelte';
   import profileIcon from './assets/icons/profile.svg?raw';
   import infoIcon from './assets/icons/info.svg?raw';
+  import { connectionErrorMessage, t, tPlural } from './lib/i18n';
+  import {
+    RATE_LIMIT_MAX_SENDS,
+    RATE_LIMIT_WINDOW_MS,
+  } from './lib/rate-limit.svelte';
+
+  const rateLimitWindowMinutes = RATE_LIMIT_WINDOW_MS / 60_000;
 
   let newMessage = $state('');
   let showSettings = $state(false);
@@ -22,7 +34,7 @@
   let initialScrollDoneForUrl = $state<string | null>(null);
   let lastMessageCount = $state(0);
 
-  // Verbindung einmalig beim Laden aufbauen
+  // Connect once when the side panel loads
   onMount(() => {
     spacetimeChat.connect();
     const tickId = setInterval(() => rateLimitState.bumpTick(), 1000);
@@ -36,7 +48,7 @@
   const cooldownSecs = $derived(Math.ceil(cooldownMs / 1000));
   const rateLimited = $derived(cooldownMs > 0);
 
-  // Sobald URL + Username + connected: Raum abonnieren
+  // Subscribe to room when URL, username, and connection are ready
   $effect(() => {
     const url = urlState.current;
     const username = profileState.current.username;
@@ -61,7 +73,7 @@
     )
   );
 
-  // Raumwechsel: erneut einmal nach unten scrollen
+  // Reset initial scroll when the room URL changes
   $effect(() => {
     const url = urlState.current;
     if (url !== initialScrollDoneForUrl) {
@@ -69,7 +81,7 @@
     }
   });
 
-  // Initial-Scroll + Auto-Scroll nur wenn Nutzer unten
+  // Initial scroll and auto-scroll when the user is near the bottom
   $effect(() => {
     const url = urlState.current;
     const msgs = spacetimeChat.current.messages;
@@ -121,7 +133,7 @@
 
   function handleUsernameInput(e: Event) {
     const el = e.currentTarget as HTMLInputElement;
-    const filtered = filterMessageInput(el.value);
+    const filtered = filterMessageInput(el.value, MAX_USERNAME_LENGTH);
     el.value = filtered;
     profileState.setUsername(filtered);
   }
@@ -148,12 +160,13 @@
       <span class="dot {spacetimeChat.current.connected ? 'online' : 'offline'}"></span>
       <span class="status-text">
         {#if spacetimeChat.current.error}
-          <span class="err">Verbindungsfehler</span>
+          <span class="err">{t('status.connectionError')}</span>
         {:else if spacetimeChat.current.connected}
-          <strong>{spacetimeChat.current.onlineCount}</strong>
-          {spacetimeChat.current.onlineCount === 1 ? ' Person' : ' Personen'} online
+          {tPlural('status.online', spacetimeChat.current.onlineCount, {
+            count: spacetimeChat.current.onlineCount,
+          })}
         {:else}
-          Verbinde…
+          {t('status.connecting')}
         {/if}
       </span>
     </div>
@@ -162,8 +175,8 @@
         type="button"
         class="icon-btn"
         class:active={showInfo}
-        title="Info & Datenschutz"
-        aria-label="Info und Datenschutz"
+        title={t('header.infoTitle')}
+        aria-label={t('header.infoAria')}
         aria-expanded={showInfo}
         onclick={() => (showInfo = !showInfo)}
       >
@@ -173,8 +186,8 @@
         type="button"
         class="icon-btn"
         class:active={showSettings}
-        title="Profil"
-        aria-label="Profil bearbeiten"
+        title={t('header.profileTitle')}
+        aria-label={t('header.profileAria')}
         aria-expanded={showSettings}
         onclick={() => (showSettings = !showSettings)}
       >
@@ -183,56 +196,62 @@
     </div>
   </header>
 
-  <!-- Raum-URL -->
   <div class="room-bar">
-    <span class="label">Raum:</span>
-    <span class="url" title={urlState.current || ''}>{urlState.current || 'Kein Tab aktiv'}</span>
+    <span class="label">{t('room.label')}</span>
+    <span class="url" title={urlState.current || ''}
+      >{urlState.current || t('room.noActiveTab')}</span
+    >
   </div>
 
   {#if showInfo}
     <div class="info-panel">
-      <p><strong>Anonym & lokal</strong></p>
+      <p><strong>{t('info.title')}</strong></p>
       <ul>
-        <li>Kein Login — Pseudonym und Profil nur in diesem Browser gespeichert.</li>
-        <li>URLs werden bereinigt, damit ihr im gleichen Raum landet.</li>
-        <li>Server sieht deine SpacetimeDB-Identity, nicht deinen echten Namen.</li>
+        <li>{t('info.bullet1')}</li>
+        <li>{t('info.bullet2')}</li>
+        <li>{t('info.bullet3')}</li>
       </ul>
     </div>
   {/if}
 
-  <!-- Profil-Einstellungen -->
   {#if showSettings}
     <div class="settings-panel">
-      <label for="username-input">Pseudonym:</label>
+      <label for="username-input">{t('settings.pseudonymLabel')}</label>
       <input
         id="username-input"
         type="text"
+        maxlength={MAX_USERNAME_LENGTH}
         value={profileState.current.username}
         oninput={handleUsernameInput}
       />
       {#if spacetimeChat.current.identity}
-        <p class="identity">ID: {spacetimeChat.current.identity.slice(0, 16)}…</p>
+        <p class="identity">
+          {t('settings.identityPrefix', {
+            id: spacetimeChat.current.identity.slice(0, 16),
+          })}
+        </p>
       {/if}
       {#if spacetimeChat.current.error}
-        <p class="err-detail">{spacetimeChat.current.error}</p>
+        <p class="err-detail">{connectionErrorMessage(spacetimeChat.current.error)}</p>
       {/if}
     </div>
   {/if}
 
-  <!-- Chat-Verlauf -->
   <div class="messages" bind:this={messagesContainer}>
     {#if !urlState.current}
-      <div class="empty">Öffne einen Website-Tab um den Chat zu laden.</div>
+      <div class="empty">{t('messages.openTab')}</div>
     {:else if !spacetimeChat.current.connected}
       <div class="empty">
-        {spacetimeChat.current.error ? '⚠️ ' + spacetimeChat.current.error : 'Verbinde mit Server…'}
+        {spacetimeChat.current.error
+          ? connectionErrorMessage(spacetimeChat.current.error)
+          : t('messages.connectingToServer')}
       </div>
     {:else if spacetimeChat.current.messages.length === 0}
-      <div class="empty">Noch keine Nachrichten. Sei der Erste! 👋</div>
+      <div class="empty">{t('messages.empty')}</div>
     {:else}
       {#if showLoadOlder}
         <button type="button" class="load-older-btn" onclick={handleLoadOlder}>
-          Ältere Nachrichten laden
+          {t('messages.loadOlder')}
         </button>
       {/if}
       {#each visibleMessages as msg (msg.id)}
@@ -244,22 +263,22 @@
     {/if}
   </div>
 
-  <!-- Eingabe -->
   <footer class="input-area">
     <div class="input-row">
       <input
         type="text"
         class:muted={rateLimited}
+        maxlength={MAX_MESSAGE_LENGTH}
         value={newMessage}
         oninput={handleMessageInput}
         onpaste={handleMessagePaste}
         placeholder={!urlState.current
-          ? 'Kein Tab aktiv'
+          ? t('input.placeholderNoTab')
           : !spacetimeChat.current.connected
-            ? 'Verbinde…'
+            ? t('input.placeholderConnecting')
             : rateLimited
-              ? `Noch ${cooldownSecs}s…`
-              : 'Nachricht schreiben…'}
+              ? t('input.placeholderCooldown', { seconds: cooldownSecs })
+              : t('input.placeholderCompose')}
         disabled={!urlState.current || !spacetimeChat.current.connected || rateLimited}
         onkeydown={(e) => e.key === 'Enter' && handleSend()}
       />
@@ -268,11 +287,16 @@
         class:muted={rateLimited}
         disabled={!canSendMessage || !spacetimeChat.current.connected || !urlState.current}
       >
-        {rateLimited ? `${cooldownSecs}s` : 'Senden'}
+        {rateLimited ? `${cooldownSecs}s` : t('input.send')}
       </button>
     </div>
     {#if spacetimeChat.current.connected && urlState.current}
-      <p class="rate-hint">Max. 2 Nachrichten pro Minute.</p>
+      <p class="rate-hint">
+        {t('input.rateLimitHint', {
+          max: RATE_LIMIT_MAX_SENDS,
+          windowMinutes: rateLimitWindowMinutes,
+        })}
+      </p>
     {/if}
   </footer>
 </main>

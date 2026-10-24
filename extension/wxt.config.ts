@@ -14,8 +14,9 @@ export default defineConfig({
     },
   }),
   manifest: ({ browser }) => ({
-    name: 'WepChat - URL Chat & Presence',
-    description: 'Echtzeit-Chat und Presence-Tracker pro Webseiten-URL',
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
+    default_locale: 'en',
     version: '1.0.0',
     permissions: ['sidePanel', 'tabs', 'storage', 'activeTab'],
     // In Chrome: natives side_panel
@@ -31,12 +32,12 @@ export default defineConfig({
       ? {
           sidebar_action: {
             default_panel: 'sidepanel.html',
-            default_title: 'WepChat',
+            default_title: '__MSG_sidebarTitle__',
           },
         }
       : {}),
     action: {
-      default_title: 'WepChat Side Panel öffnen',
+      default_title: '__MSG_actionTitle__',
     },
   }),
 });

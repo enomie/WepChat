@@ -1,4 +1,4 @@
-import { prepareMessageForSend } from './message-text-policy';
+import { prepareUsername } from './message-text-policy';
 
 export interface Profile {
   username: string;
@@ -17,7 +17,7 @@ export function createProfileState() {
     browser.storage.local.get('userProfile').then((res) => {
       if (res.userProfile) {
         const stored = res.userProfile as Profile;
-        const cleaned = prepareMessageForSend(stored.username);
+        const cleaned = prepareUsername(stored.username);
         profile = cleaned
           ? { ...stored, username: cleaned }
           : { ...stored, username: defaultProfile.username };
@@ -31,7 +31,7 @@ export function createProfileState() {
   }
 
   async function setUsername(newUsername: string) {
-    const prepared = prepareMessageForSend(newUsername);
+    const prepared = prepareUsername(newUsername);
     if (!prepared) return;
     profile.username = prepared;
     if (typeof browser !== 'undefined' && browser.storage?.local) {

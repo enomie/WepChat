@@ -1,5 +1,8 @@
-const MAX_SENDS_PER_WINDOW = 2;
-const WINDOW_MS = 60_000;
+export const RATE_LIMIT_MAX_SENDS = 2;
+export const RATE_LIMIT_WINDOW_MS = 60_000;
+
+const MAX_SENDS_PER_WINDOW = RATE_LIMIT_MAX_SENDS;
+const WINDOW_MS = RATE_LIMIT_WINDOW_MS;
 
 function createRateLimitState() {
   let sendTimestamps = $state<number[]>([]);

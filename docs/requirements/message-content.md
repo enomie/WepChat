@@ -87,6 +87,19 @@ export function filterMessageInput(value: string): string {
 
 ---
 
+## 3.1 Maximale Länge (Zeichen)
+
+| Feld | Max. Zeichen | Client | Server |
+|------|--------------|--------|--------|
+| **Pseudonym** (`username`) | **13** | `filterMessageInput(..., MAX_USERNAME_LENGTH)`, `prepareUsername`, `maxlength` am Profil-Input | `join_room` / `send_message`: nach Normalisierung `chars().count() <= 13`, sonst kein Update/Insert |
+| **Chat-Nachricht** (`text`) | **400** | `filterMessageInput` / `prepareMessageForSend`, `maxlength` am Chat-Input | `send_message`: nach Normalisierung `chars().count() <= 400`, sonst kein Insert |
+
+Konstanten: `MAX_USERNAME_LENGTH` / `MAX_MESSAGE_LENGTH` in [message-text-policy.ts](../../extension/src/lib/message-text-policy.ts); `MAX_USERNAME_LEN` / `MAX_MESSAGE_TEXT_LEN` in [lib.rs](../../server/src/lib.rs).
+
+UX wie bei verbotenen Zeichen: ab Limit **keine weiteren Zeichen** im Eingabefeld; Server lehnt zu lange Payloads **still** ab (kein Insert).
+
+---
+
 ## 4. Extension
 
 ### 4.1 Modul
@@ -126,6 +139,7 @@ Angreifer ohne Extension können den Reducer trotzdem aufrufen — deshalb ist S
 - [x] Paste mit gemischtem Text: nur erlaubte Zeichen bleiben.
 - [x] Server: `send_message` mit verbotenem Zeichen erzeugt **keine** neue `chat_message`-Zeile.
 - [x] Regeln in TS und Rust **semantisch gleich** (gleiche Testbeispiele).
+- [x] Pseudonym max. **13** Zeichen, Nachricht max. **400** Zeichen (Client + Server).
 
 ### 6.1 Testideen (manuell)
 

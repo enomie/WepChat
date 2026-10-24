@@ -1,0 +1,48 @@
+{
+  "status": {
+    "connectionError": "Connection error",
+    "connecting": "Connecting…",
+    "online": {
+      "one": "{count} person online",
+      "other": "{count} people online"
+    }
+  },
+  "errors": {
+    "connect": "Could not connect to the server. Check your network and try again.",
+    "build": "Could not initialize the chat client."
+  },
+  "header": {
+    "infoTitle": "Info & privacy",
+    "infoAria": "Info and privacy",
+    "profileTitle": "Profile",
+    "profileAria": "Edit profile"
+  },
+  "room": {
+    "label": "Room:",
+    "noActiveTab": "No active tab"
+  },
+  "info": {
+    "title": "Anonymous & local",
+    "bullet1": "No login — pseudonym and profile are stored only in this browser.",
+    "bullet2": "URLs are normalized so you land in the same room.",
+    "bullet3": "The server sees your SpacetimeDB identity, not your real name."
+  },
+  "settings": {
+    "pseudonymLabel": "Pseudonym:",
+    "identityPrefix": "ID: {id}…"
+  },
+  "messages": {
+    "openTab": "Open a website tab to load the chat.",
+    "connectingToServer": "Connecting to server…",
+    "empty": "No messages yet. Be the first!",
+    "loadOlder": "Load older messages"
+  },
+  "input": {
+    "placeholderNoTab": "No active tab",
+    "placeholderConnecting": "Connecting…",
+    "placeholderCooldown": "{seconds}s left…",
+    "placeholderCompose": "Write a message…",
+    "send": "Send",
+    "rateLimitHint": "Max. {max} messages per {windowMinutes} min."
+  }
+}

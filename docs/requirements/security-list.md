@@ -115,7 +115,7 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 
 | Maßnahme | Problem heute | Idee |
 |----------|----------------|------|
-| **Längenlimits** | Unbegrenzte Strings | URL ≤ 2 KB, Username ≤ 32, Text ≤ 500–1000 |
+| **Längenlimits** | URL noch offen | Username **13**, Text **400** ✓ — [message-content.md §3.1](message-content.md#31-maximale-länge-zeichen); URL ≤ 2 KB Backlog |
 | **Username normalisieren** | Unicode/Steuerzeichen | `trim()`, Whitelist ([ideas.md](../kickoff/ideas.md)) |
 | **Nur `http`/`https`** | Exotische Schemes | Prefix-Check |
 | **Localhost blocken** | Interne URLs als Raum | `localhost`, `127.0.0.1`, `::1`, private IPs |
@@ -128,10 +128,10 @@ Profil-/Username-Feld in den Einstellungen **bleibt editierbar** während des Co
 Retention 72 h: eigene Spezifikation in [Abschnitt 6](#6-nachrichten-retention-72-stunden).
 
 ```rust
-// Richtung Längenlimits (Auszug)
-const MAX_TEXT_LEN: usize = 500;
-const MAX_URL_LEN: usize = 2048;
-const MAX_USERNAME_LEN: usize = 32;
+// Längenlimits (umgesetzt in lib.rs)
+const MAX_MESSAGE_TEXT_LEN: usize = 400;
+const MAX_USERNAME_LEN: usize = 13;
+// Backlog: MAX_URL_LEN: usize = 2048;
 ```
 
 ---

@@ -16,13 +16,15 @@ import {
 const SPACETIMEDB_URI = 'wss://maincloud.spacetimedb.com';
 const MODULE_NAME = 'wepchat';
 
+export type ChatConnectionError = 'connect' | 'build';
+
 export interface ChatState {
   connected: boolean;
   onlineCount: number;
   messages: ChatMessage[];
   visibleLimit: number;
   identity: string | null;
-  error: string | null;
+  error: ChatConnectionError | null;
 }
 
 function createSpacetimeChat() {
@@ -41,26 +43,26 @@ function createSpacetimeChat() {
   function connect() {
     if (conn) return; // bereits verbunden oder verbindet
 
-    console.log('[WepChat] Starte Verbindung zu SpacetimeDB...');
+    console.log('[WepChat] Connecting to SpacetimeDB...');
 
     try {
       conn = DbConnection.builder()
         .withUri(SPACETIMEDB_URI)
         .withDatabaseName(MODULE_NAME)
         .onConnect((_connection, identity, _token) => {
-          console.log('[WepChat] Verbunden! Identity:', identity.toHexString());
+          console.log('[WepChat] Connected. Identity:', identity.toHexString());
           state.connected = true;
           state.identity = identity.toHexString();
           state.error = null;
         })
         .onDisconnect((_connection, _error) => {
-          console.warn('[WepChat] Getrennt.');
+          console.warn('[WepChat] Disconnected.');
           state.connected = false;
         })
         .onConnectError((_ctx, err) => {
-          console.error('[WepChat] Verbindungsfehler:', err);
+          console.error('[WepChat] Connection error:', err);
           state.connected = false;
-          state.error = String(err);
+          state.error = 'connect';
         })
         .build();
 
@@ -86,8 +88,8 @@ function createSpacetimeChat() {
       conn.db.user_session.onUpdate(recountOnline);
       conn.db.user_session.onDelete(recountOnline);
     } catch (err) {
-      console.error('[WepChat] Build-Fehler:', err);
-      state.error = String(err);
+      console.error('[WepChat] Client build error:', err);
+      state.error = 'build';
     }
   }
 
@@ -142,13 +144,13 @@ function createSpacetimeChat() {
     try {
       conn.reducers.joinRoom({ url, username });
     } catch (err) {
-      console.warn('[WepChat] joinRoom Fehler:', err);
+      console.warn('[WepChat] joinRoom error:', err);
     }
   }
 
   function sendMessage(url: string, username: string, text: string) {
     if (!conn || !state.connected) {
-      console.warn('[WepChat] Nicht verbunden, Nachricht verworfen.');
+      console.warn('[WepChat] Not connected; message dropped.');
       return;
     }
     const clean = prepareMessageForSend(text);
@@ -157,7 +159,7 @@ function createSpacetimeChat() {
       conn.reducers.sendMessage({ url, username, text: clean });
       rateLimitState.recordSend();
     } catch (err) {
-      console.error('[WepChat] Sende-Fehler:', err);
+      console.error('[WepChat] Send error:', err);
     }
   }
 

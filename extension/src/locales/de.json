@@ -1,0 +1,48 @@
+{
+  "status": {
+    "connectionError": "Verbindungsfehler",
+    "connecting": "Verbinde…",
+    "online": {
+      "one": "{count} Person online",
+      "other": "{count} Personen online"
+    }
+  },
+  "errors": {
+    "connect": "Verbindung zum Server fehlgeschlagen. Netzwerk prüfen und erneut versuchen.",
+    "build": "Chat-Client konnte nicht initialisiert werden."
+  },
+  "header": {
+    "infoTitle": "Info & Datenschutz",
+    "infoAria": "Info und Datenschutz",
+    "profileTitle": "Profil",
+    "profileAria": "Profil bearbeiten"
+  },
+  "room": {
+    "label": "Raum:",
+    "noActiveTab": "Kein Tab aktiv"
+  },
+  "info": {
+    "title": "Anonym & lokal",
+    "bullet1": "Kein Login — Pseudonym und Profil nur in diesem Browser gespeichert.",
+    "bullet2": "URLs werden bereinigt, damit ihr im gleichen Raum landet.",
+    "bullet3": "Server sieht deine SpacetimeDB-Identity, nicht deinen echten Namen."
+  },
+  "settings": {
+    "pseudonymLabel": "Pseudonym:",
+    "identityPrefix": "ID: {id}…"
+  },
+  "messages": {
+    "openTab": "Öffne einen Website-Tab um den Chat zu laden.",
+    "connectingToServer": "Verbinde mit Server…",
+    "empty": "Noch keine Nachrichten. Sei der Erste!",
+    "loadOlder": "Ältere Nachrichten laden"
+  },
+  "input": {
+    "placeholderNoTab": "Kein Tab aktiv",
+    "placeholderConnecting": "Verbinde…",
+    "placeholderCooldown": "Noch {seconds}s…",
+    "placeholderCompose": "Nachricht schreiben…",
+    "send": "Senden",
+    "rateLimitHint": "Max. {max} Nachrichten pro {windowMinutes} Min."
+  }
+}
