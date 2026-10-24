@@ -1,5 +1,6 @@
-// Rate limit & retention: docs/requirements/security-list.md §1 + §6
+// Rate limit (send_rate_state) & retention: docs/requirements/security-list.md §1 + §6
 // Message charset: docs/requirements/message-content.md
+// Query patterns: docs/requirements/server-query-patterns.md
 use spacetimedb::{
     reducer, table, Identity, ReducerContext, ScheduleAt, Table, TimeDuration, Timestamp,
 };
@@ -58,6 +59,15 @@ struct PurgeExpiredSchedule {
     scheduled_at: ScheduleAt,
 }
 
+/// Letzte Sendezeiten pro Identity (2/Min) — kein Scan über `chat_message`.
+#[table(name = send_rate_state)]
+struct SendRateState {
+    #[primary_key]
+    identity: Identity,
+    send_at_1: Timestamp,
+    send_at_2: Timestamp,
+}
+
 fn only_scheduler(ctx: &ReducerContext) -> bool {
     ctx.sender == ctx.identity()
 }
@@ -77,21 +87,78 @@ fn normalize_allowed_text(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-fn count_recent_messages(ctx: &ReducerContext, sender: Identity) -> u32 {
-    let window_start = ctx
-        .timestamp
-        .checked_sub(rate_window())
-        .unwrap_or(Timestamp::UNIX_EPOCH);
+fn rate_window_start(now: Timestamp) -> Timestamp {
+    now.checked_sub(rate_window()).unwrap_or(Timestamp::UNIX_EPOCH)
+}
+
+fn timestamp_in_rate_window(t: Timestamp, window_start: Timestamp) -> bool {
+    t != Timestamp::UNIX_EPOCH && t >= window_start
+}
+
+fn count_sends_in_window(send_at_1: Timestamp, send_at_2: Timestamp, window_start: Timestamp) -> u32 {
     let mut count = 0u32;
-    for msg in ctx.db.chat_message().iter() {
-        if msg.sender_identity == sender && msg.created_at >= window_start {
-            count += 1;
-            if count >= MAX_MESSAGES_PER_WINDOW {
-                break;
-            }
-        }
+    if timestamp_in_rate_window(send_at_1, window_start) {
+        count += 1;
+    }
+    if timestamp_in_rate_window(send_at_2, window_start) {
+        count += 1;
     }
     count
+}
+
+fn merge_rate_timestamps_after_send(
+    send_at_1: Timestamp,
+    send_at_2: Timestamp,
+    now: Timestamp,
+    window_start: Timestamp,
+) -> (Timestamp, Timestamp) {
+    let mut active: Vec<Timestamp> = Vec::new();
+    if timestamp_in_rate_window(send_at_1, window_start) {
+        active.push(send_at_1);
+    }
+    if timestamp_in_rate_window(send_at_2, window_start) {
+        active.push(send_at_2);
+    }
+    active.push(now);
+    active.sort();
+    match active.len() {
+        0 => (Timestamp::UNIX_EPOCH, Timestamp::UNIX_EPOCH),
+        1 => (Timestamp::UNIX_EPOCH, active[0]),
+        _ => {
+            let n = active.len();
+            (active[n - 2], active[n - 1])
+        }
+    }
+}
+
+fn is_rate_limited(ctx: &ReducerContext, sender: Identity) -> bool {
+    let window_start = rate_window_start(ctx.timestamp);
+    let state = ctx.db.send_rate_state();
+    match state.identity().find(&sender) {
+        Some(row) => {
+            count_sends_in_window(row.send_at_1, row.send_at_2, window_start)
+                >= MAX_MESSAGES_PER_WINDOW
+        }
+        None => false,
+    }
+}
+
+fn record_rate_send(ctx: &ReducerContext, sender: Identity, now: Timestamp) {
+    let window_start = rate_window_start(now);
+    let table = ctx.db.send_rate_state();
+    if let Some(mut row) = table.identity().find(&sender) {
+        let (send_at_1, send_at_2) =
+            merge_rate_timestamps_after_send(row.send_at_1, row.send_at_2, now, window_start);
+        row.send_at_1 = send_at_1;
+        row.send_at_2 = send_at_2;
+        table.identity().update(row);
+    } else {
+        table.insert(SendRateState {
+            identity: sender,
+            send_at_1: Timestamp::UNIX_EPOCH,
+            send_at_2: now,
+        });
+    }
 }
 
 fn ensure_purge_job(ctx: &ReducerContext) {
@@ -167,6 +234,7 @@ fn purge_expired_messages(ctx: &ReducerContext, _arg: PurgeExpiredSchedule) {
 #[reducer(client_disconnected)]
 pub fn identity_disconnected(ctx: &ReducerContext) {
     ctx.db.user_session().identity().delete(&ctx.sender);
+    ctx.db.send_rate_state().identity().delete(&ctx.sender);
     log::info!("User getrennt: {:?}", ctx.sender);
 }
 
@@ -240,7 +308,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 
     ensure_purge_job(ctx);
 
-    if count_recent_messages(ctx, ctx.sender) >= MAX_MESSAGES_PER_WINDOW {
+    if is_rate_limited(ctx, ctx.sender) {
         return;
     }
 
@@ -254,4 +322,65 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
     });
 
     schedule_message_deletion(ctx, row.id, row.created_at);
+    record_rate_send(ctx, ctx.sender, ctx.timestamp);
+}
+
+#[cfg(test)]
+mod rate_window_tests {
+    use super::*;
+
+    fn ts(micros: i64) -> Timestamp {
+        Timestamp::from_micros_since_unix_epoch(micros)
+    }
+
+    #[test]
+    fn count_empty_slots() {
+        let start = ts(100);
+        assert_eq!(count_sends_in_window(Timestamp::UNIX_EPOCH, Timestamp::UNIX_EPOCH, start), 0);
+    }
+
+    #[test]
+    fn count_one_in_window() {
+        let start = ts(100);
+        assert_eq!(count_sends_in_window(ts(150), Timestamp::UNIX_EPOCH, start), 1);
+        assert_eq!(count_sends_in_window(ts(50), Timestamp::UNIX_EPOCH, start), 0);
+    }
+
+    #[test]
+    fn count_two_in_window() {
+        let start = ts(100);
+        assert_eq!(count_sends_in_window(ts(110), ts(120), start), 2);
+    }
+
+    #[test]
+    fn merge_keeps_two_newest_in_window() {
+        let start = ts(0);
+        let now = ts(200);
+        let (a, b) = merge_rate_timestamps_after_send(ts(50), ts(150), now, start);
+        assert_eq!(a, ts(150));
+        assert_eq!(b, ts(200));
+    }
+
+    #[test]
+    fn merge_drops_stale_outside_window() {
+        let start = ts(100);
+        let now = ts(200);
+        let (a, b) = merge_rate_timestamps_after_send(ts(10), ts(150), now, start);
+        assert_eq!(a, ts(150));
+        assert_eq!(b, ts(200));
+    }
+
+    #[test]
+    fn first_send_stores_in_send_at_2() {
+        let start = ts(0);
+        let now = ts(1_000_000);
+        let (a, b) = merge_rate_timestamps_after_send(
+            Timestamp::UNIX_EPOCH,
+            Timestamp::UNIX_EPOCH,
+            now,
+            start,
+        );
+        assert_eq!(a, Timestamp::UNIX_EPOCH);
+        assert_eq!(b, now);
+    }
 }

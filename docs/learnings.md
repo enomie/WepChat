@@ -196,5 +196,37 @@ Server-Logik in `server/src/lib.rs` (2 Nachrichten / 60 s, 72 h Retention vi
 - **Eine Policy-Datei:** `extension/src/lib/message-text-policy.ts` — `filterMessageInput` (Tippen/Paste), `prepareMessageForSend` (Senden).
 - **Nicht in `$derived` filtern** — nur in Event-Handlern (`oninput` / `onpaste`), sonst Risiko `state_unsafe_mutation` (wie §7).
 - **Server lehnt ab, säubert nicht:** Verbotene Zeichen in `send_message` / `join_room` → `return`, kein Strip fremder Müll-Strings.
+- **Links im Chat:** Kein separater URL-Regex — fehlende Zeichen (`:`, `/`, `@`, …) machen klassische URLs unmöglich; siehe [message-content.md §8](requirements/message-content.md#8-links-domains-kein-link-regex).
 - Spec: [message-content.md](requirements/message-content.md).
+
+---
+
+## 10. Identity-Limits und Spam
+
+- SpacetimeDB-**Identity** in der Extension hängt am **lokalen Token** (Browser-Storage / Profil). Jede neue Identity startet mit leerer Historie.
+- **Server-Limits pro `ctx.sender`** (z. B. „100 Nachrichten / 72 h pro Raum“) sind per Script umgehbar: Storage leeren, Profil wechseln, erneut verbinden — Zähler **0**.
+- **Folge:** Idee [ideas.md §6](../kickoff/ideas.md) (100/72h pro URL + Identity) wurde **nicht** umgesetzt; dokumentiert als verworfen in [security-list.md §7](requirements/security-list.md#7-bewusst-nicht-ziel).
+- **Was bleibt:** kurzes [2/Min-Rate-Limit](requirements/security-list.md#1-nachrichten-rate-limit-2-pro-minute), [Zeichenfilter](requirements/message-content.md), [Retention 72 h](requirements/security-list.md#6-nachrichten-retention-72-stunden) (Datenhygiene). Gegen professionellen Spam später andere Hebel (Moderation, Captcha, kostenpflichtige Identities, Infrastruktur-Heuristik) — siehe Roadmap in [security.md](requirements/security.md).
+
+---
+
+## 11. Kein `chat_message`-Vollscan in Reducern
+
+### Ist-Zustand
+
+**Rate-Limit (2/Min):** [`send_rate_state`](../server/src/lib.rs) — PK `identity`, kein `chat_message().iter()` in `send_message`. Unit-Tests: `cd server && cargo test` (`rate_window_tests`).
+
+**Noch Scan:** **`purge_expired_messages`** iteriert `chat_message` (Scheduler, seltener — Index auf `created_at` möglich).
+
+`chat_message` hat nur PK `id` — **keine** B-Tree-Indizes auf `url` / `sender_identity` / `created_at`.
+
+### Backlog
+
+| Bedarf | Muster |
+|--------|--------|
+| Echo (letzter Text pro Raum) | `sender_room_state`, PK `(identity, url)`, Feld `last_text` |
+| Retention-Batch | B-Tree auf `created_at`, Range-Delete unter `cutoff` |
+| Subscription `WHERE url = ?` | B-Tree auf `url` |
+
+Ausführlich: [server-query-patterns.md](requirements/server-query-patterns.md).
 

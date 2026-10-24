@@ -5,10 +5,22 @@
   import { spacetimeChat } from './lib/spacetime.svelte';
   import { rateLimitState } from './lib/rate-limit.svelte';
   import { filterMessageInput, prepareMessageForSend } from './lib/message-text-policy';
+  import {
+    applyScrollAnchorAfterPrepend,
+    hasOlderMessages,
+    shouldAutoScrollToBottom,
+    visibleMessagesSlice,
+  } from './lib/message-history';
+  import { tick } from 'svelte';
+  import profileIcon from './assets/icons/profile.svg?raw';
+  import infoIcon from './assets/icons/info.svg?raw';
 
   let newMessage = $state('');
   let showSettings = $state(false);
+  let showInfo = $state(false);
   let messagesContainer: HTMLDivElement | null = null;
+  let initialScrollDoneForUrl = $state<string | null>(null);
+  let lastMessageCount = $state(0);
 
   // Verbindung einmalig beim Laden aufbauen
   onMount(() => {
@@ -35,17 +47,66 @@
     }
   });
 
-  // Auto-Scroll
+  const visibleMessages = $derived(
+    visibleMessagesSlice(
+      spacetimeChat.current.messages,
+      spacetimeChat.current.visibleLimit
+    )
+  );
+
+  const showLoadOlder = $derived(
+    hasOlderMessages(
+      spacetimeChat.current.messages.length,
+      spacetimeChat.current.visibleLimit
+    )
+  );
+
+  // Raumwechsel: erneut einmal nach unten scrollen
   $effect(() => {
+    const url = urlState.current;
+    if (url !== initialScrollDoneForUrl) {
+      initialScrollDoneForUrl = null;
+    }
+  });
+
+  // Initial-Scroll + Auto-Scroll nur wenn Nutzer unten
+  $effect(() => {
+    const url = urlState.current;
     const msgs = spacetimeChat.current.messages;
-    if (msgs.length && messagesContainer) {
+    const count = msgs.length;
+    const container = messagesContainer;
+
+    if (!url || !count || !container) {
+      lastMessageCount = count;
+      return;
+    }
+
+    const isInitial = initialScrollDoneForUrl !== url;
+    const grew = count > lastMessageCount;
+    lastMessageCount = count;
+
+    if (isInitial || (grew && shouldAutoScrollToBottom(container))) {
       setTimeout(() => {
-        if (messagesContainer) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (!messagesContainer) return;
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (isInitial) {
+          initialScrollDoneForUrl = url;
         }
       }, 50);
     }
   });
+
+  async function handleLoadOlder() {
+    const container = messagesContainer;
+    if (!container) return;
+    const prevHeight = container.scrollHeight;
+    const prevTop = container.scrollTop;
+    spacetimeChat.loadOlderVisible();
+    await tick();
+    if (messagesContainer) {
+      applyScrollAnchorAfterPrepend(messagesContainer, prevHeight, prevTop);
+    }
+  }
 
   function handleMessageInput(e: Event) {
     const el = e.currentTarget as HTMLInputElement;
@@ -96,9 +157,30 @@
         {/if}
       </span>
     </div>
-    <button class="settings-btn" onclick={() => (showSettings = !showSettings)}>
-      ⚙️ Profil
-    </button>
+    <div class="header-actions">
+      <button
+        type="button"
+        class="icon-btn"
+        class:active={showInfo}
+        title="Info & Datenschutz"
+        aria-label="Info und Datenschutz"
+        aria-expanded={showInfo}
+        onclick={() => (showInfo = !showInfo)}
+      >
+        {@html infoIcon}
+      </button>
+      <button
+        type="button"
+        class="icon-btn"
+        class:active={showSettings}
+        title="Profil"
+        aria-label="Profil bearbeiten"
+        aria-expanded={showSettings}
+        onclick={() => (showSettings = !showSettings)}
+      >
+        {@html profileIcon}
+      </button>
+    </div>
   </header>
 
   <!-- Raum-URL -->
@@ -106,6 +188,17 @@
     <span class="label">Raum:</span>
     <span class="url" title={urlState.current || ''}>{urlState.current || 'Kein Tab aktiv'}</span>
   </div>
+
+  {#if showInfo}
+    <div class="info-panel">
+      <p><strong>Anonym & lokal</strong></p>
+      <ul>
+        <li>Kein Login — Pseudonym und Profil nur in diesem Browser gespeichert.</li>
+        <li>URLs werden bereinigt, damit ihr im gleichen Raum landet.</li>
+        <li>Server sieht deine SpacetimeDB-Identity, nicht deinen echten Namen.</li>
+      </ul>
+    </div>
+  {/if}
 
   <!-- Profil-Einstellungen -->
   {#if showSettings}
@@ -137,7 +230,12 @@
     {:else if spacetimeChat.current.messages.length === 0}
       <div class="empty">Noch keine Nachrichten. Sei der Erste! 👋</div>
     {:else}
-      {#each spacetimeChat.current.messages as msg (msg.id)}
+      {#if showLoadOlder}
+        <button type="button" class="load-older-btn" onclick={handleLoadOlder}>
+          Ältere Nachrichten laden
+        </button>
+      {/if}
+      {#each visibleMessages as msg (msg.id)}
         <div class="bubble {msg.senderName === profileState.current.username ? 'own' : ''}">
           <span class="sender">{msg.senderName}</span>
           <span class="text">{msg.text}</span>
@@ -214,13 +312,58 @@
 
   .err { color: #ef4444; }
 
-  .settings-btn {
+  .header-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    color: #475569;
     background: transparent;
     border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 0.75rem;
+    border-radius: 6px;
     cursor: pointer;
+  }
+
+  .icon-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+
+  .icon-btn.active {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #0f172a;
+  }
+
+  .info-panel {
+    padding: 10px 14px;
+    background: #f0f9ff;
+    border-bottom: 1px solid #bae6fd;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    flex-shrink: 0;
+  }
+
+  .info-panel p {
+    margin: 0 0 6px;
+  }
+
+  .info-panel ul {
+    margin: 0;
+    padding-left: 1.1rem;
+    color: #334155;
+  }
+
+  .info-panel li {
+    margin-bottom: 4px;
   }
 
   .room-bar {
@@ -271,6 +414,23 @@
     font-size: 0.82rem;
     line-height: 1.5;
     padding: 20px;
+  }
+
+  .load-older-btn {
+    align-self: center;
+    margin-bottom: 4px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .load-older-btn:hover {
+    background: #dbeafe;
   }
 
   .bubble {

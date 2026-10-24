@@ -18,7 +18,7 @@ Verwandt: [security-list.md](security-list.md) (Umsetzungsreihenfolge), [ideas.m
 | **Server** | Gleiche Regel; bei Verstoß **kein Insert** (still, wie Rate-Limit). |
 | **Anzeige** | Bereits gespeicherte Nachrichten werden unverändert angezeigt; Filter gilt für **neue** Eingaben. |
 
-Keine URLs, keine `@`, keine `#`, keine Emojis, keine Steuerzeichen — alles fällt unter „nicht erlaubt“.
+Keine URLs, keine `@`, keine `#`, keine Emojis, keine Steuerzeichen — alles fällt unter „nicht erlaubt“. **Link- und Domain-Spam** wird bewusst über diese Whitelist gelöst, nicht über einen separaten Link-Detector (siehe [§8](#8-links-domains-kein-link-regex)).
 
 ---
 
@@ -138,6 +138,51 @@ Angreifer ohne Extension können den Reducer trotzdem aufrufen — deshalb ist S
 
 ## 7. Dokumenten-Links
 
-- [security-list.md](security-list.md) — Punkt 4 erledigt  
+- [security-list.md](security-list.md) — Punkt 4 erledigt; Link-Regex siehe [§7 Bewusst nicht Ziel](security-list.md#7-bewusst-nicht-ziel)  
 - [learnings.md](../learnings.md) §9 — Gotchas (kein Filter in `$derived`)  
 - [security.md](security.md) — Roadmap Inhaltsregeln  
+
+---
+
+## 8. Links & Domains (kein Link-Regex)
+
+### 8.1 Typische Maßnahme (nicht unser Ansatz)
+
+In vielen Chats wird **Link-Spam** (Affiliate, Phishing, URL-Flooding) mit Regeln wie diesen adressiert:
+
+| Variante | Idee | Aufwand (grob) |
+|----------|------|----------------|
+| Links verbieten | Regex erkennt `http://`, `https://`, `www.` … | gering (Reducer/Client) |
+| **Max. 1 Link pro Nachricht** | Zählen erkannter URLs, Rest ablehnen | gering |
+
+Das setzt eine **URL-Erkennung** voraus (Regex, Parser, Homoglyphen, `hxxp`, Punycode, …) und muss laufend gepflegt werden.
+
+### 8.2 WepChat: Whitelist statt Link-Detector
+
+Wir lösen das **über den Zeichenfilter** ([§2](#2-erlaubtes-zeichenset)) — **kein** eigenes Link-Modul, **kein** „max. 1 Link“-Zähler.
+
+Für klassische URLs fehlen in Nachrichten die **Pflichtzeichen**:
+
+| Zeichen | Rolle | In Chat-Text erlaubt? |
+|---------|--------|------------------------|
+| `:` | Schema (`https:`) | **Nein** |
+| `/` | Pfade (`//host/path`) | **Nein** |
+| `\` | Windows-Pfade, Escapes | **Nein** |
+| `@` | E-Mail, Mentions | **Nein** |
+| `#` | Fragment, Hashtags | **Nein** |
+
+Erlaubt bleiben u. a. Buchstaben, Ziffern, Leerzeichen, `,` `.` `-`. Damit lassen sich **keine** klickbaren `http(s)://…`-URLs und **keine** normalen Pfad-URLs in einer Nachricht formulieren.
+
+- **Client:** Verbotene Zeichen **erscheinen nicht** (`filterMessageInput` in [message-text-policy.ts](../../extension/src/lib/message-text-policy.ts)) — effektiv „entfernt“ beim Tippen/Paste, nicht als Fehlermeldung.
+- **Server:** Enthält der Text nach `trim` ein verbotenes Zeichen → **kein Insert** (`char_allowed` in [lib.rs](../../server/src/lib.rs)); der Server **stripped** fremde Payloads nicht.
+
+### 8.3 Abgrenzung & Grenzen
+
+| Thema | Verhalten |
+|-------|-----------|
+| **Raum-URL** (`url` in `send_message`) | **Nicht** diese Spec — normale URL des Tabs / `cleanUrl()`; Chat-Text ≠ Raum-Adresse. |
+| **„example.com“ als Klartext** | Punkt `.` ist erlaubt, aber ohne `:` und `/` kein klassischer Link; Nutzer können Domänen **nicht** als URL posten. |
+| **Umgehung** | Reducer ohne Extension: nur Strings **ohne** verbotene Zeichen sind gültig — kein Bypass über „versteckte“ URLs im Text. |
+| **Bewusst nicht** | Keine Regex-Liste für TLDs, keine Link-Zählung, kein Markdown/HTML-Rendering mit Auto-Link. |
+
+Spätere Erweiterungen (z. B. erlaubtes `?` nur in kontrollierten Mustern) wären eine **neue** Policy-Version — bis dahin gilt: **Link-Schutz = Teil der reinen Textnachrichten-Policy**.

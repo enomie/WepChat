@@ -57,7 +57,8 @@
 
 ### 5. Was fehlt noch? / Mögliche Zukunftsanforderungen ("Was noch?")
 
-* **Historie & Inaktivität:** Nachrichten werden nach **72 h** serverseitig gelöscht — [security-list.md](security-list.md#6-nachrichten-retention-72-stunden).
+* **Historie & Inaktivität:** Nachrichten werden nach **72 h** serverseitig gelöscht — [security-list.md](security-list.md#6-nachrichten-retention-72-stunden). **Sidepanel:** Client-Fenster (neueste 100, „Ältere laden“) — [message-history-pagination.md](message-history-pagination.md).
 * **Moderation & Safety:** Bad-Word-Filter, User-Muting oder Meldefunktionen für unangemessene Nachrichten im Backend.
 * **Benachrichtigungen:** Unaufdringliche Indikatoren (z. B. kleiner Badge am Extension-Icon), wenn auf der aktuellen Seite aktiv gechattet wird.
 * **Domain-weite Räume (Optionaler Tab):** Neben dem Raum für die *exakte URL* könnte ein zweiter Tab für die gesamte Domain existieren (z. B. Chat für ganz `amazon.de`).
+* **Internationalisierung:** UI nach Browsersprache (**de** + **en** im MVP, Fallback **en**); Code/Kommentare Englisch — [internationalization.md](internationalization.md).

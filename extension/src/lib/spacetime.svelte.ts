@@ -6,6 +6,12 @@ import { DbConnection } from './spacetimedb';
 import type { ChatMessage } from './spacetimedb/types';
 import { rateLimitState } from './rate-limit.svelte';
 import { prepareMessageForSend } from './message-text-policy';
+import {
+  DEFAULT_VISIBLE_LIMIT,
+  hasOlderMessages,
+  nextVisibleLimit,
+  MESSAGE_PAGE_SIZE,
+} from './message-history';
 
 const SPACETIMEDB_URI = 'wss://maincloud.spacetimedb.com';
 const MODULE_NAME = 'wepchat';
@@ -14,6 +20,7 @@ export interface ChatState {
   connected: boolean;
   onlineCount: number;
   messages: ChatMessage[];
+  visibleLimit: number;
   identity: string | null;
   error: string | null;
 }
@@ -26,6 +33,7 @@ function createSpacetimeChat() {
     connected: false,
     onlineCount: 0,
     messages: [],
+    visibleLimit: DEFAULT_VISIBLE_LIMIT,
     identity: null,
     error: null,
   });
@@ -111,6 +119,7 @@ function createSpacetimeChat() {
     if (subscribedUrl === url) return; // bereits abonniert
     subscribedUrl = url;
     state.messages = [];
+    state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
     state.onlineCount = 0;
 
     conn
@@ -160,7 +169,18 @@ function createSpacetimeChat() {
     }
     state.connected = false;
     state.messages = [];
+    state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
     subscribedUrl = '';
+  }
+
+  function loadOlderVisible() {
+    const total = state.messages.length;
+    if (!hasOlderMessages(total, state.visibleLimit)) return;
+    state.visibleLimit = nextVisibleLimit(
+      state.visibleLimit,
+      MESSAGE_PAGE_SIZE,
+      total
+    );
   }
 
   return {
@@ -169,6 +189,7 @@ function createSpacetimeChat() {
     subscribeToUrl,
     sendMessage,
     disconnect,
+    loadOlderVisible,
   };
 }
 
