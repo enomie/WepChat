@@ -274,6 +274,34 @@
         <li>{t('info.faq7')}</li>
       </ul>
       <p class="info-contact">{t('info.contact')}</p>
+      <section class="info-storage-section" aria-labelledby="info-storage-heading">
+        <p id="info-storage-heading" class="info-faq-heading">
+          <strong>{t('info.storageTitle')}</strong>
+        </p>
+        <p class="info-storage-intro">{t('info.storageIntro')}</p>
+        <table class="info-storage-table">
+          <thead>
+            <tr>
+              <th scope="col">{t('info.storageColTable')}</th>
+              <th scope="col">{t('info.storageColData')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{t('info.storageUserSession')}</td>
+              <td>{t('info.storageUserSessionData')}</td>
+            </tr>
+            <tr>
+              <td>{t('info.storageChatMessage')}</td>
+              <td>{t('info.storageChatMessageData')}</td>
+            </tr>
+            <tr>
+              <td>{t('info.storageInternal')}</td>
+              <td>{t('info.storageInternalData')}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
     </div>
   {/if}
 
@@ -503,7 +531,11 @@
     border-bottom: 1px solid color-mix(in srgb, var(--wepchat-green) 32%, white);
     font-size: 0.78rem;
     line-height: 1.45;
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(52vh, calc(100vh - 11rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .info-panel p {
@@ -513,6 +545,45 @@
   .info-panel .info-idea-text {
     margin-bottom: 8px;
     color: #334155;
+  }
+
+  .info-panel .info-storage-section {
+    margin-top: 2px;
+  }
+
+  .info-panel .info-storage-section .info-faq-heading {
+    margin-top: 10px;
+  }
+
+  .info-panel .info-storage-intro {
+    margin-bottom: 6px;
+    color: #334155;
+  }
+
+  .info-panel .info-storage-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 4px;
+    color: #334155;
+    font-size: 0.72rem;
+  }
+
+  .info-panel .info-storage-table th,
+  .info-panel .info-storage-table td {
+    border: 1px solid color-mix(in srgb, var(--wepchat-green) 28%, #cbd5e1);
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .info-panel .info-storage-table th {
+    background: color-mix(in srgb, var(--wepchat-green) 10%, white);
+    font-weight: 600;
+  }
+
+  .info-panel .info-storage-table td:first-child {
+    width: 38%;
+    word-break: break-word;
   }
 
   .info-panel .info-faq-heading {
