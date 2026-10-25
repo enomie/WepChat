@@ -8,6 +8,7 @@ use spacetimedb::{
 };
 
 const MAX_MESSAGES_PER_WINDOW: u32 = 2;
+const MIN_USERNAME_LEN: usize = 2;
 const MAX_USERNAME_LEN: usize = 13;
 const MAX_MESSAGE_TEXT_LEN: usize = 400;
 const MAX_URL_LEN: usize = 2048;
@@ -443,7 +444,11 @@ pub fn join_room(ctx: &ReducerContext, url: String, username: String, nick_color
         return;
     }
     let normalized_username = normalize_allowed_text(&clean_username);
-    if normalized_username.is_empty() || !within_char_limit(&normalized_username, MAX_USERNAME_LEN) {
+    let name_len = normalized_username.chars().count();
+    if normalized_username.is_empty()
+        || name_len < MIN_USERNAME_LEN
+        || !within_char_limit(&normalized_username, MAX_USERNAME_LEN)
+    {
         return;
     }
 
@@ -690,6 +695,15 @@ mod room_pseudonym_tests {
     fn username_eq_ci_works() {
         assert!(username_eq_ci("Kurt", "kurt"));
         assert!(!username_eq_ci("Kurt", "Kurt2"));
+    }
+
+    #[test]
+    fn wish_username_must_be_at_least_min_len() {
+        let one = normalize_allowed_text("A");
+        assert_eq!(one.chars().count(), 1);
+        assert!(one.chars().count() < MIN_USERNAME_LEN);
+        let two = normalize_allowed_text("AB");
+        assert_eq!(two.chars().count(), MIN_USERNAME_LEN);
     }
 
     #[test]

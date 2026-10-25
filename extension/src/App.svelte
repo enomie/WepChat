@@ -6,9 +6,12 @@
   import { rateLimitState } from './lib/rate-limit.svelte';
   import {
     filterMessageInput,
+    isUsernameReadyForCommit,
     MAX_MESSAGE_LENGTH,
+    MIN_USERNAME_LENGTH,
     MAX_USERNAME_LENGTH,
     prepareMessageForSend,
+    prepareUsername,
   } from './lib/message-text-policy';
   import {
     applyScrollAnchorAfterPrepend,
@@ -38,9 +41,17 @@
   let initialScrollDoneForUrl = $state<string | null>(null);
   let lastMessageCount = $state(0);
   let messageAgeNowMs = $state(Date.now());
+  let usernameDraft = $state(profileState.current.username);
+  let usernameInputFocused = $state(false);
 
   const chatIdentity = $derived(spacetimeChat.current.identity);
   const chatRoomName = $derived(spacetimeChat.current.roomDisplayName);
+
+  const committedUsernameLabel = $derived(
+    spacetimeChat.current.connected && spacetimeChat.current.roomDisplayName
+      ? spacetimeChat.current.roomDisplayName
+      : profileState.current.username
+  );
 
   // Connect once when the side panel loads
   onMount(() => {
@@ -61,6 +72,13 @@
   const rateLimited = $derived(cooldownMs > 0);
 
   const tabChat = $derived(urlState.tab);
+
+  $effect(() => {
+    showSettings;
+    committedUsernameLabel;
+    if (usernameInputFocused) return;
+    usernameDraft = committedUsernameLabel;
+  });
 
   // Subscribe to room when URL, profile, and connection are ready
   $effect(() => {
@@ -148,11 +166,28 @@
     });
   }
 
+  function handleUsernameFocus() {
+    usernameInputFocused = true;
+  }
+
+  function handleUsernameBlur() {
+    usernameInputFocused = false;
+    const prepared = prepareUsername(usernameDraft);
+    if (isUsernameReadyForCommit(prepared)) {
+      profileState.setUsername(prepared);
+    }
+    usernameDraft = committedUsernameLabel;
+  }
+
   function handleUsernameInput(e: Event) {
     const el = e.currentTarget as HTMLInputElement;
     const filtered = filterMessageInput(el.value, MAX_USERNAME_LENGTH);
-    el.value = filtered;
-    profileState.setUsername(filtered);
+    usernameDraft = filtered;
+    const prepared = prepareUsername(filtered);
+    if (isUsernameReadyForCommit(prepared)) {
+      profileState.setUsername(prepared);
+    }
+    el.value = usernameDraft;
   }
 
   function selectNickColor(id: number) {
@@ -313,15 +348,13 @@
       <input
         id="username-input"
         type="text"
+        minlength={MIN_USERNAME_LENGTH}
         maxlength={MAX_USERNAME_LENGTH}
-        value={profileState.current.username}
+        value={usernameDraft}
+        onfocus={handleUsernameFocus}
+        onblur={handleUsernameBlur}
         oninput={handleUsernameInput}
       />
-      {#if spacetimeChat.current.connected && urlState.current && spacetimeChat.current.roomDisplayName && spacetimeChat.current.roomDisplayName !== profileState.current.username}
-        <p class="room-display-hint">
-          {t('settings.roomDisplayName', { name: spacetimeChat.current.roomDisplayName })}
-        </p>
-      {/if}
       <span id="nick-color-label" class="settings-field-label">
         <strong>{t('settings.colorLabel')}</strong>
       </span>
@@ -633,12 +666,6 @@
     border-radius: 4px;
     box-sizing: border-box;
     font-size: 0.82rem;
-  }
-  .room-display-hint {
-    margin: 6px 0 0;
-    font-size: 0.75rem;
-    color: #64748b;
-    line-height: 1.35;
   }
   .settings-field-label {
     display: block;

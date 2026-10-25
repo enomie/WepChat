@@ -1,5 +1,5 @@
 import { DEFAULT_NICK_COLOR_ID, normalizeNickColorId } from './nick-colors';
-import { prepareUsername } from './message-text-policy';
+import { isUsernameReadyForCommit, prepareUsername } from './message-text-policy';
 
 export interface Profile {
   username: string;
@@ -14,7 +14,8 @@ const defaultProfile: Profile = {
 export function migrateStoredProfile(stored: Record<string, unknown>): Profile {
   const rawUsername = typeof stored.username === 'string' ? stored.username : '';
   const cleaned = prepareUsername(rawUsername);
-  const username = cleaned || defaultProfile.username;
+  const username =
+    cleaned && isUsernameReadyForCommit(cleaned) ? cleaned : defaultProfile.username;
   const nickColorId = normalizeNickColorId(stored.nickColorId);
   return { username, nickColorId };
 }
@@ -42,7 +43,7 @@ export function createProfileState() {
 
   async function setUsername(newUsername: string) {
     const prepared = prepareUsername(newUsername);
-    if (!prepared) return;
+    if (!isUsernameReadyForCommit(prepared)) return;
     profile.username = prepared;
     await persist();
   }

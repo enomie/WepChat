@@ -32,7 +32,7 @@ Verwandt: [message-content.md](message-content.md) (Zeichen, Länge 13), [nickna
 
 ### 2.2 Zuweisung in `join_room`
 
-Eingabe: Wunschname `W` (normalisiert, nicht leer, ≤ 13 Zeichen), Raum-URL `U`, Sender `ctx.sender`.
+Eingabe: Wunschname `W` (normalisiert, 2–13 Zeichen), Raum-URL `U`, Sender `ctx.sender`.
 
 1. Alle `user_session` mit `current_url == U` und `identity != ctx.sender` laden (Presence-Menge des Raums).
 2. Belegte Anzeigenamen = deren `username` (case-insensitive Set).
@@ -86,12 +86,12 @@ Damit ist Impersonation („als Kurt senden, obwohl Session Kurt2“) nicht mög
 
 | Ort | Verhalten |
 |-----|-----------|
-| **Profil (`userProfile.username`)** | Bleibt der **Wunschname** (Nutzer tippt „Kurt“). |
+| **Profil (`userProfile.username`)** | Bleibt der **Wunschname** (2–13 Zeichen, lokal persistiert). |
+| **Pseudonym-Eingabe (Settings)** | Zeigt bei Verbindung und eigener Session den **Raum-Anzeigenamen** (`user_session.username`, z. B. `Kurt2`); sonst den Wunschnamen. Bearbeiten aktualisiert den Wunschnamen und triggert `join_room`. Kein leeres Feld, keine 1-Zeichen-Namen. |
 | **`join_room`** | Sendet Wunschname + `nick_color` bei URL-Wechsel, Profil- oder Farbänderung (wie heute). |
 | **Raum-Anzeigename** | Aus **eigener** `user_session`-Zeile (Subscription), Feld `username`. |
 | **Chat-Liste** | Weiterhin `msg.senderName` (bereits disambiguiert). |
 | **„Eigene“ Blase / Löschen** | UI: `messageIsMine`; Server: nur `sender_identity` ([delete-messages.md](delete-messages.md)). |
-| **UI-Hinweis** | Wenn `user_session.username` ≠ Wunschname (case-sensitive Anzeige ok): dezenter Text z. B. „In this room you appear as: Kurt2“ (i18n, Settings oder Raum-Kopf). Kein Modal. |
 | **`send_message`** | Kann Wunschnamen mitschicken; Server nutzt nur Session. |
 
 **FAQ / Info-Text (später):** Kollisionen nur pro Seite/Raum; Wunschname lokal, Anzeige im Raum kann Suffix haben.

@@ -87,16 +87,16 @@ export function filterMessageInput(value: string): string {
 
 ---
 
-## 3.1 Maximale Länge (Zeichen)
+## 3.1 Länge (Zeichen)
 
-| Feld | Max. Zeichen | Client | Server |
-|------|--------------|--------|--------|
-| **Pseudonym** (`username`) | **13** | `filterMessageInput(..., MAX_USERNAME_LENGTH)`, `prepareUsername`, `maxlength` am Profil-Input | `join_room` / `send_message`: nach Normalisierung `chars().count() <= 13`, sonst kein Update/Insert |
-| **Chat-Nachricht** (`text`) | **400** | `filterMessageInput` / `prepareMessageForSend`, `maxlength` am Chat-Input | `send_message`: nach Normalisierung `chars().count() <= 400`, sonst kein Insert |
+| Feld | Min. | Max. | Client | Server |
+|------|------|------|--------|--------|
+| **Pseudonym** (`username`) | **2** | **13** | `MIN_USERNAME_LENGTH` / `MAX_USERNAME_LENGTH`, `isUsernameReadyForCommit`, `prepareUsername`, `minlength` / `maxlength` am Profil-Input; unter 2 Zeichen kein Persist, Eingabe springt auf letzten gültigen Anzeigenamen | `join_room`: nach Normalisierung `MIN_USERNAME_LEN <= chars().count() <= MAX_USERNAME_LEN`, sonst kein Update |
+| **Chat-Nachricht** (`text`) | — | **400** | `filterMessageInput` / `prepareMessageForSend`, `maxlength` am Chat-Input | `send_message`: nach Normalisierung `chars().count() <= 400`, sonst kein Insert |
 
-Konstanten: `MAX_USERNAME_LENGTH` / `MAX_MESSAGE_LENGTH` in [message-text-policy.ts](../../extension/src/lib/message-text-policy.ts); `MAX_USERNAME_LEN` / `MAX_MESSAGE_TEXT_LEN` in [lib.rs](../../server/src/lib.rs).
+Konstanten: `MIN_USERNAME_LENGTH` / `MAX_USERNAME_LENGTH` / `MAX_MESSAGE_LENGTH` in [message-text-policy.ts](../../extension/src/lib/message-text-policy.ts); `MIN_USERNAME_LEN` / `MAX_USERNAME_LEN` / `MAX_MESSAGE_TEXT_LEN` in [lib.rs](../../server/src/lib.rs).
 
-UX wie bei verbotenen Zeichen: ab Limit **keine weiteren Zeichen** im Eingabefeld; Server lehnt zu lange Payloads **still** ab (kein Insert).
+UX wie bei verbotenen Zeichen: ab Max-Limit **keine weiteren Zeichen** im Eingabefeld; unter Min-Länge kein leeres Pseudonym-Feld; Server lehnt ungültige Längen **still** ab (kein Insert).
 
 ---
 
