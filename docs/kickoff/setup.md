@@ -123,7 +123,9 @@ export default app;
 ```
 
 #### 3. Background Service Worker (`src/entrypoints/background.ts`)
-Damit ein Klick auf das Extension-Icon in der Toolbar verlässlich das Side Panel öffnet (Chrome MV3 Best Practice):
+Öffnet das Side Panel beim Klick auf das Action-Icon und pflegt den **Live-Badge** (Tab-Events plus `chrome.alarms`, 1 Minute für den aktiven Tab). Details: [live_badge.md](../requirements/live_badge.md).
+
+Beispiel (nur Side-Panel-Verhalten, verkürzt):
 
 ```typescript
 export default defineBackground(() => {

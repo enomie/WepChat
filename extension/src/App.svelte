@@ -271,6 +271,7 @@
         <li>{t('info.faq4')}</li>
         <li>{t('info.faq5')}</li>
         <li>{t('info.faq6')}</li>
+        <li>{t('info.faq7')}</li>
       </ul>
       <p class="info-contact">{t('info.contact')}</p>
     </div>

@@ -39,6 +39,7 @@
     "faq4": "Inkognito-Modus? Nur temporäre Sitzung, wird beim Schließen zurückgesetzt.",
     "faq5": "Alle Chat-Nachrichten werden automatisch nach 72 Stunden gelöscht.",
     "faq6": "Verschlüsselung? Ja. Dein Browser verbindet sich mit unseren Servern über TLS. Es ist kein geheimer Chat: Wer im gleichen Raum ist, kann Nachrichten lesen; sie liegen auf dem Server bis zur automatischen Löschung.",
+    "faq7": "Badge am Icon? Die Zahl zeigt, wie viele Personen WepChat auf dieser Seite gerade offen haben und im Chat-Raum sind. Wir erfassen nicht, welche Seiten du besuchst. Deine Anwesenheit melden wir erst, wenn du das Sidepanel öffnest.",
     "contact": "Kontakt: wepchat@proton.me"
   },
   "settings": {

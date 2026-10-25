@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 16 16">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #00ef16;
+      }
+
+      .cls-2 {
+        fill: #2e9933;
+        opacity: .08;
+      }
+
+      .cls-3 {
+        display: none;
+      }
+
+      .cls-4 {
+        fill: none;
+        stroke: #ff740f;
+        stroke-miterlimit: 10;
+        stroke-width: .28px;
+      }
+    </style>
+  </defs>
+  <!-- Generator: Adobe Illustrator 28.6.0, SVG Export Plug-In . SVG Version: 1.2.0 Build 709)  -->
+  <g>
+    <g id="Layer_1">
+      <rect class="cls-2" x="0" y="0" width="16" height="16" rx="3.13" ry="3.13"/>
+      <path class="cls-1" d="M12.87,0H3.13C1.4,0,0,1.4,0,3.13v9.74c0,1.73,1.4,3.13,3.13,3.13h9.74c1.73,0,3.13-1.4,3.13-3.13V3.13C16,1.4,14.6,0,12.87,0ZM3.83,5.33c0-.83.67-1.5,1.5-1.5s1.5.67,1.5,1.5-.67,1.5-1.5,1.5-1.5-.67-1.5-1.5ZM14.72,12.87c0,1.02-.83,1.85-1.85,1.85h-7.54v-3.11c0-.61.24-1.19.67-1.62l3.99-3.99c.43-.43.67-1.01.67-1.62V1.28h2.2c1.02,0,1.85.83,1.85,1.85v9.74ZM12.17,10.67c0,.83-.67,1.5-1.5,1.5s-1.5-.67-1.5-1.5.67-1.5,1.5-1.5,1.5.67,1.5,1.5Z"/>
+      <g class="cls-3">
+        <rect class="cls-4" width="5.33" height="5.33"/>
+        <rect class="cls-4" x="5.33" width="5.33" height="5.33"/>
+        <rect class="cls-4" x="10.67" width="5.33" height="5.33"/>
+        <rect class="cls-4" y="5.33" width="5.33" height="5.33"/>
+        <rect class="cls-4" x="5.33" y="5.33" width="5.33" height="5.33"/>
+        <rect class="cls-4" x="10.67" y="5.33" width="5.33" height="5.33"/>
+        <rect class="cls-4" y="10.67" width="5.33" height="5.33"/>
+        <rect class="cls-4" x="5.33" y="10.67" width="5.33" height="5.33"/>
+        <rect class="cls-4" x="10.67" y="10.67" width="5.33" height="5.33"/>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -167,7 +167,7 @@ pub fn send_message(ctx: &ReducerContext, url: String, username: String, text: S
 2. **Automatischer Disconnect (`#[reducer(client_disconnected)]`):**  
    Schließt ein Nutzer den Tab oder verliert die Verbindung, feuert SpacetimeDB diesen Reducer serverseitig. So bleibt der Presence-Zähler verlässlich aktuell.
 3. **Subscriptions im Sidepanel:**  
-   Das Sidepanel nutzt WebSocket-Subscriptions (`chat_message` / `user_session` pro URL), Push statt Polling. Der **Background Service Worker** für den Live-Badge nutzt zusätzlich einen leichten **HTTP-SQL**-Count (siehe [live_badge.md](../requirements/live_badge.md), [security.md](../requirements/security.md)).
+   Das Sidepanel nutzt WebSocket-Subscriptions (`chat_message` / `user_session` pro URL), Push statt Polling. Der **Background Service Worker** für den Live-Badge nutzt einen leichten **HTTP-SQL**-Count bei Tab-Events und **minütlich** per `chrome.alarms` für den aktiven Tab (siehe [live_badge.md](../requirements/live_badge.md), [security.md](../requirements/security.md)).
 
 ---
 

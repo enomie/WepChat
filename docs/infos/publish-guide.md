@@ -12,7 +12,9 @@ Verwandt: [spacetimedb.md](../kickoff/spacetimedb.md), [security.md](../requirem
 |------|--------|----------------|
 | **Nur Server-Logik live** | `server/` | `cargo test` → `spacetime publish wepchat -y` |
 | **Server + neues Schema/Reducer-Signatur** | `server/` + `extension/` | Publish → `npm run codegen:stdb` → Extension neu laden/build |
-| **Store-ZIP (Chrome)** | `extension/` | Version bump → `npm run publish:chrome` |
+| **Store-ZIP (Chrome + Firefox)** | `extension/` | Version bump → `npm run publish` |
+| **Nur Chrome-ZIP** | `extension/` | `npm run publish:chrome` |
+| **Nur Firefox-ZIP** | `extension/` | `npm run publish:firefox` |
 | **Lokale Extension ohne ZIP** | `extension/` | `npm run check` → `npm run build` → in `chrome://extensions` neu laden |
 | **Entpackt aus `.output/chrome-mv3`** | `extension/` | Nach **jeder** Änderung unter `extension/src/`: `npm run build` (schreibt `.output/chrome-mv3`), dann Extension **Aktualisieren** |
 
@@ -81,27 +83,57 @@ cd extension
 npm run test:unit
 npm run check:locales
 npm run check          # svelte-check (TypeScript + Svelte)
-npm run build          # Production + `chrome-mv3.zip` (oder build:firefox)
+npm run build          # Chrome: Ordner + ZIP (Alias für build:chrome)
+npm run build:all      # Chrome + Firefox, jeweils Ordner + ZIP
 ```
 
-### Store-Paket Chrome (alles in einem)
+### Store-Pakete (alles in einem)
+
+```bash
+npm run publish
+```
+
+Führt aus: Unit-Tests, Locale-Check, `icons:generate`, Production-Build für **Chrome und Firefox**, jeweils Ordner + ZIP.
+
+Nur ein Browser:
 
 ```bash
 npm run publish:chrome
+npm run publish:firefox
 ```
 
-Führt aus: Unit-Tests, Locale-Check, `icons:generate`, Production-Build, ZIP.
+**Artefakte:**
 
-**Upload-Datei:** `extension/.output/chrome-mv3.zip` (wird bei jedem `npm run build` neu erzeugt, neben dem Ordner `chrome-mv3/`).
+| Browser | Entpackt testen | Upload-ZIP |
+|---------|-----------------|------------|
+| Chrome | `extension/.output/chrome-mv3/` | `extension/.output/chrome-mv3.zip` |
+| Firefox | `extension/.output/firefox-mv2/` | `extension/.output/firefox-mv2.zip` (gleicher Inhalt als `firefox-mv2.xpi` für AMO) |
+
+### Firefox lokal testen (Signatur!)
+
+**Normales Firefox** installiert nur **von Mozilla signierte** Add-ons dauerhaft. Unser lokales `firefox-mv2.xpi` / `.zip` ist **nicht signiert**. „Aus Datei installieren“ oder ein XPI führt dann zu **not verified** / nicht verifiziert. Das ist erwartet, kein Build-Fehler.
+
+**So testest du die Extension lokal (empfohlen):**
+
+1. `about:debugging` in die Adresszeile
+2. Links **„Dieses Firefox“** (This Firefox)
+3. **„Temporäres Add-on laden…“**
+4. Datei: `extension/.output/firefox-mv2/manifest.json` (Ordner entpackt, **kein** ZIP)
+
+Das Add-on läuft bis du Firefox **komplett beendest** (nicht nur ein Fenster). Nach Neustart Schritt 1–4 wiederholen.
+
+**Nicht** für lokalen Test: `about:addons` → Add-on aus Datei → `.xpi` (braucht AMO-Signatur).
+
+**Dauerhaft / wie Endnutzer:** Einreichung bei [addons.mozilla.org](https://addons.mozilla.org/) (AMO). Nach Review liefert Mozilla ein signiertes Paket; `firefox-mv2.zip` oder `.xpi` dort hochladen.
+
+**Nur Entwicklung (optional, auf eigenes Risiko):** In `about:config` `xpinstall.signatures.required` auf `false` setzen, dann ist „Aus Datei installieren“ möglich. Besser: temporäres Laden wie oben oder AMO **Unlisted**-Signierung für Tester.
 
 **Version vor jedem Store-Upload** in beiden Dateien gleich setzen:
 
 - `extension/package.json` → `version`
 - `extension/wxt.config.ts` → `manifest` Callback → `version`
 
-Dann `npm run publish:chrome` erneut.
-
-**Firefox:** `npm run build:firefox` / `npm run zip:firefox` (kein `publish:chrome`-Script, gleiche Qualitätschecks manuell wie oben).
+Dann `npm run publish` (oder nur `publish:chrome` / `publish:firefox`) erneut.
 
 ---
 
@@ -113,7 +145,7 @@ cd ../extension
 # nur bei Schema/Reducer-API-Änderung:
 # npm run codegen:stdb
 npm run test:unit && npm run check:locales && npm run check
-npm run publish:chrome
+npm run publish
 ```
 
 ---
@@ -169,7 +201,7 @@ WXT: `npx wxt-publish-extension` (Chrome-API-Credentials + Item-ID). Erster Rele
 - [ ] `server/` deploy (falls geändert)
 - [ ] `codegen:stdb` (falls Tabellen/Reducer-API geändert)
 - [ ] Version in `package.json` und `wxt.config.ts`
-- [ ] `npm run publish:chrome` grün (inkl. tests + locales + icons + build)
+- [ ] `npm run publish` grün (inkl. tests + locales + icons + Chrome + Firefox ZIP)
 - [ ] Optional vorher: `npm run check` (svelte-check)
 - [ ] Icons aktuell (`public/icon/logo.svg` → via `icons:generate` in publish:chrome)
 - [ ] Datenschutz-URL erreichbar

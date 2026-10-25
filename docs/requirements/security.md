@@ -95,7 +95,7 @@ Alle Client-Verbindungen von WepChat zum gehosteten Backend laufen über **TLS**
 - **Kein Geheimnis vor dem Betreiber** des Backends (Speicher, Betrieb, Dashboard).
 - Das WebSocket-**Reconnect-Token** sichert nur die **Identity-Wiedererkennung**, nicht Vertraulichkeit der Inhalte.
 
-**Nutzer-FAQ (ohne Backend-Anbieter):** Sidepanel „Info & Datenschutz“, Locale-Key `info.faq6` in `extension/src/locales/`.
+**Nutzer-FAQ (ohne Backend-Anbieter):** Sidepanel „Info & Datenschutz“, Locale-Keys `info.faq6` (Verschlüsselung), `info.faq7` (Badge, keine URL-Erfassung ohne Sidepanel) in `extension/src/locales/`.
 
 ---
 
@@ -120,23 +120,13 @@ Reducer (u. a.): `join_room`, `leave_room`, `send_message`, `identity_disconnect
 
 ## 6. HTTP-SQL im Background (Live Badge)
 
-Für den tab-spezifischen Badge fragt der **Service Worker** ohne separates Secret die öffentliche SQL-API ab:
-
-```3:27:extension/src/entrypoints/background.ts
-const SPACETIMEDB_SQL_URL = 'https://maincloud.spacetimedb.com/v1/database/wepchat/sql';
-// ...
-const response = await fetch(SPACETIMEDB_SQL_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'text/plain' },
-  body: query,
-});
-```
+Für den tab-spezifischen Badge fragt der **Service Worker** ohne separates Secret die öffentliche SQL-API ab (`extension/src/lib/live-badge.ts`, aufgerufen aus `background.ts`). Zusätzlich zur Tab-Navigation nutzt die Extension die Permission **`alarms`**: etwa **ein SQL-POST pro Minute** für den aktiven Tab im fokussierten Fenster (ohne 10s-Cache), plus Abrufe bei Tab-Wechsel und URL-Updates (mit 10s-Cache pro URL).
 
 **Sicherheitsrelevant:**
 
 - Liest nur aus **`user_session`** (Count pro `current_url`), gleiche Daten wie Subscriptions im Sidepanel.
 - URLs werden per `cleanUrl()` escaped (einfaches SQL-Escape für `'`); siehe [live_badge.md](live_badge.md).
-- **Missbrauch:** Unbegrenzte SQL-POSTs könnten Last erzeugen oder öffentliche Tabellen auslesen, kein zusätzlicher Schutz durch Client-Secret; ggf. später Rate-Limits auf Anbieter-Seite, Caching (bereits 10s pro URL), oder Badge nur über WebSocket wenn Sidepanel offen.
+- **Missbrauch:** Viele SQL-POSTs könnten Last erzeugen oder öffentliche Tabellen auslesen, kein zusätzlicher Schutz durch Client-Secret; ggf. später Rate-Limits auf Anbieter-Seite, Caching, oder Badge nur über WebSocket wenn Sidepanel offen.
 
 Details: [live_badge.md](live_badge.md).
 

@@ -18,7 +18,13 @@ export default defineConfig({
     description: '__MSG_extDescription__',
     default_locale: 'en',
     version: '1.0.0',
-    permissions: ['sidePanel', 'tabs', 'storage', 'activeTab'],
+    permissions: [
+      ...(browser === 'chrome' ? (['sidePanel'] as const) : []),
+      'tabs',
+      'storage',
+      'activeTab',
+      'alarms',
+    ],
     // In Chrome: natives side_panel
     ...(browser === 'chrome'
       ? {
@@ -27,12 +33,21 @@ export default defineConfig({
           },
         }
       : {}),
-    // In Firefox: natives sidebar_action
+    // In Firefox: natives sidebar_action + AMO / Firefox 140+ manifest requirements
     ...(browser === 'firefox'
       ? {
           sidebar_action: {
             default_panel: 'sidepanel.html',
             default_title: '__MSG_sidebarTitle__',
+          },
+          browser_specific_settings: {
+            gecko: {
+              id: 'wepchat@wepchat',
+              data_collection_permissions: {
+                required: ['browsingActivity', 'personalCommunications'],
+                optional: ['technicalAndInteraction'],
+              },
+            },
           },
         }
       : {}),

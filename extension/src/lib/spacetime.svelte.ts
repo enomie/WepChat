@@ -14,6 +14,7 @@ import {
   MESSAGE_PAGE_SIZE,
 } from './message-history';
 import { escapeSqlStringLiteral } from './sql-literal-escape';
+import { BADGE_COLOR, formatBadgeText } from './live-badge';
 
 const SPACETIMEDB_URI = 'wss://maincloud.spacetimedb.com';
 const MODULE_NAME = 'wepchat';
@@ -153,10 +154,10 @@ function createSpacetimeChat() {
     if (browser.action) {
       browser.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
         if (tab?.id) {
-          const text = count > 1 ? (count > 999 ? '99+' : String(count)) : '';
+          const text = formatBadgeText(count);
           browser.action.setBadgeText({ text, tabId: tab.id }).catch(() => {});
           if (text) {
-            browser.action.setBadgeBackgroundColor({ color: '#2563EB', tabId: tab.id }).catch(() => {});
+            browser.action.setBadgeBackgroundColor({ color: BADGE_COLOR, tabId: tab.id }).catch(() => {});
           }
         }
       }).catch(() => {});

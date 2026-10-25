@@ -150,7 +150,9 @@ Alles hier ist **umgehbar**, Server-Regeln aus Abschnitt 2 bleiben maßgeblich.
 | Maßnahme | Nutzen |
 |----------|--------|
 | Localhost → kein SQL/Badge | Weniger Noise |
-| Cache 10 s | Bereits vorhanden |
+| Cache 10 s | Tab-Events, schnelles Tab-Hopping |
+| Alarm 1 min., aktiver Tab | Badge ohne Sidepanel bei gleicher URL; `bypassCache` am Alarm-Tick |
+| `live-badge.ts` | Gemeinsame Logik für Background und Sidepanel-Formatierung |
 
 ---
 

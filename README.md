@@ -4,15 +4,38 @@
 
 No account. No social login. Open the side panel and talk.
 
-### Try it in Chrome (Developer mode)
+### Install the extension (pre-built)
 
-A pre-built unpacked extension lives in the repo:
+Pre-built packages live under `extension/.output/` on the `main` branch.
 
-**[extension/.output/chrome-mv3](https://github.com/enomie/WepChat/tree/main/extension/.output/chrome-mv3)**
+| Browser | Download ZIP | Unpacked folder (clone repo) |
+|---------|--------------|------------------------------|
+| **Chrome** | [chrome-mv3.zip](https://github.com/enomie/WepChat/raw/main/extension/.output/chrome-mv3.zip) | [chrome-mv3/](https://github.com/enomie/WepChat/tree/main/extension/.output/chrome-mv3) |
+| **Firefox** | [firefox-mv2.zip](https://github.com/enomie/WepChat/raw/main/extension/.output/firefox-mv2.zip) | Unzip the ZIP, or run `npm run build:firefox` locally |
 
-1. Clone this repository (or download that folder).
-2. Open `chrome://extensions`, enable **Developer mode**.
-3. Click **Load unpacked** and choose the local directory `extension/.output/chrome-mv3`.
+#### Chrome
+
+1. Download [chrome-mv3.zip](https://github.com/enomie/WepChat/raw/main/extension/.output/chrome-mv3.zip) and unzip it, **or** clone the repo and use `extension/.output/chrome-mv3/`.
+2. Open `chrome://extensions`.
+3. Turn on **Developer mode** (top right).
+4. Click **Load unpacked** and select the `chrome-mv3` folder (the one that contains `manifest.json`).
+
+The side panel opens from the extension toolbar icon.
+
+#### Firefox
+
+Firefox only accepts **Mozilla-signed** add-ons for permanent install from a file. For local testing, use a **temporary** load (no AMO account needed).
+
+1. Download [firefox-mv2.zip](https://github.com/enomie/WepChat/raw/main/extension/.output/firefox-mv2.zip) and unzip it to a folder (e.g. `firefox-mv2/` with `manifest.json` inside).
+2. Open `about:debugging` in the address bar.
+3. Click **This Firefox** on the left.
+4. Click **Load Temporary Add-on…** and choose **`manifest.json`** inside the unzipped `firefox-mv2` folder (not the `.zip` file).
+
+The chat opens in the **sidebar**. The add-on stays loaded until you **fully quit** Firefox; after a restart, repeat steps 2–4.
+
+Do **not** use **Add-ons → Install add-on from file** with the ZIP or XPI unless the build is signed on AMO. Unsigned packages show *not verified*.
+
+Store releases (signed): [Chrome Web Store](https://chrome.google.com/webstore) (when listed) and [Firefox Add-ons (AMO)](https://addons.mozilla.org/) (when listed). Build locally with `npm run publish` in `extension/`.
 
 ---
 
@@ -92,11 +115,12 @@ WepChat/
 cd extension
 npm install
 npm run dev          # WXT dev server + test browser
-npm run build        # production build → .output/
-npm run build:firefox
+npm run build        # Chrome → .output/chrome-mv3/ + chrome-mv3.zip
+npm run build:all    # Chrome + Firefox (firefox-mv2/ + firefox-mv2.zip)
+npm run publish      # tests, locales, icons, then build:all (before store upload)
 ```
 
-Load the unpacked extension from [`extension/.output/chrome-mv3`](https://github.com/enomie/WepChat/tree/main/extension/.output/chrome-mv3) (committed build), or rebuild locally and use the fresh output under `extension/.output/` (Firefox: artifact after `build:firefox`).
+Load unpacked: `extension/.output/chrome-mv3/` or `extension/.output/firefox-mv2/` (after `npm run build` / `build:all`). Store ZIPs: `chrome-mv3.zip`, `firefox-mv2.zip` in the same `.output/` folder.
 
 ### Backend (publish & regenerate client)
 
