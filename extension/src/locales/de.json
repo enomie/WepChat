@@ -25,6 +25,7 @@
   "info": {
     "ideaTitle": "Die Idee",
     "ideaText": "Chatte mit anderen, die gerade dieselbe Seite besuchen, wie ein kurzes Gespräch im Laden mit jemandem, der sich für das Gleiche interessiert.",
+    "ideaPanelText": "Wenn du mit anderen auf derselben Seite ins Gespräch kommst, lass das Panel offen. Schließt du es, merken andere nicht, dass du noch da bist.",
     "storageTitle": "Was auf dem Server gespeichert wird",
     "storageIntro": "Im Chat-Modul gibt es keine IP-Adresse. Gespeichert wird nur, was der Chat braucht:",
     "storageColTable": "Tabelle",

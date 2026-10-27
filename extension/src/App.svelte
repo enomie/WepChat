@@ -289,6 +289,7 @@
     <div class="info-panel">
       <p><strong>{t('info.ideaTitle')}</strong></p>
       <p class="info-idea-text">{t('info.ideaText')}</p>
+      <p class="info-idea-text">{t('info.ideaPanelText')}</p>
       <p class="info-faq-heading"><strong>{t('info.title')}</strong></p>
       <ul>
         <li>{t('info.safety1')}</li>

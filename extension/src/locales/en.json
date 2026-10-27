@@ -25,6 +25,7 @@
   "info": {
     "ideaTitle": "The idea",
     "ideaText": "Chat with others who are on the same page right now, like meeting someone in a shop who is into the same thing.",
+    "ideaPanelText": "To chat with others on the same page, keep the panel open. When you close it, others will not know you are still there.",
     "storageTitle": "What we store on the server",
     "storageIntro": "The chat module does not store your IP address. We only keep what the chat needs:",
     "storageColTable": "Table",
