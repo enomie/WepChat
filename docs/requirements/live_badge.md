@@ -1,4 +1,4 @@
-# Spezifikation: Background Live Badge (Presence-Indikator)
+# Spezifikation: Live Badge (Presence-Indikator)
 
 Dieses Dokument beschreibt das Konzept, die Architektur und die Umsetzung des Live-Badges auf dem angepinnten Extension-Icon im Browser.
 
@@ -6,86 +6,55 @@ Dieses Dokument beschreibt das Konzept, die Architektur und die Umsetzung des Li
 
 ## 1. Ziel & User Experience (UX)
 
-Wenn Nutzer durchs Web surfen (z. B. auf Amazon, YouTube, Newsseiten, Blogs), soll das WepChat-Icon in der Browser-Toolbar sofort anzeigen, ob sich auf dieser URL gerade andere Menschen im Chat aufhalten.
+Wenn Nutzer WepChat auf einer Seite **offen haben** (Sidepanel geöffnet), soll das Icon in der Toolbar anzeigen, ob sich auf dieser URL gerade mindestens eine weitere Person im Chat aufhält.
 
-* **Sidepanel geschlossen**: Der Nutzer muss das Sidepanel **nicht** öffnen, um die **Zahl am Icon** zu sehen (Background-Badge). Die Zahl zählt nur Nutzer, die WepChat auf dieser Seite **aktiv offen** haben; WepChat trackt keine besuchten URLs ohne diese Aktion (siehe `info.faq7` in den Locales).
+* **Sidepanel geschlossen**: **Keine** Badge-Zahl und **keine** Server-Anfrage mit der Tab-URL. Der Background sendet beim Surfen keine URLs (siehe `info.faq7` in den Locales).
+* **Sidepanel geöffnet**: Badge und Online-Zähler im Panel kommen aus derselben WebSocket-Subscription (`user_session` für den normalisierten Raum).
 * **Badge-Logik**:
   * **0 oder 1 Nutzer** (nur man selbst oder niemand): Badge ist **leer** (keine Zahl, kein visueller Lärm).
   * **Ab 2 Nutzern**: Badge zeigt die Anzahl (z. B. `2`, `14`, `120`).
   * **Große Zahlen (≥ 1000)**: Formatierung als `99+` (Platzbeschränkung von max. 4 Zeichen in Chromium).
-* **Tab-spezifisch**: Jeder Tab hat seinen eigenen Badge-Status (`tabId`). Wechselt der Nutzer von Amazon (2 online) auf YouTube (18 online), wechselt die Zahl sofort synchron zum aktiven Tab.
+* **Tab-spezifisch**: Updates nutzen `tabId` des aktiven Tabs im Fenster des Sidepanels. Beim Schließen des Panels wird der Badge geleert.
 
 ---
 
 ## 2. Technische Architektur
 
-Chrome Manifest V3 unterscheidet strikt zwischen dem **Sidepanel** (UI, lebt nur solange geöffnet) und dem **Background Service Worker** (`background.ts`, Event-Handler plus periodischer Alarm). Die Badge-Logik liegt in `extension/src/lib/live-badge.ts`.
+Der **Background Service Worker** ([`background.ts`](../../extension/src/entrypoints/background.ts)) öffnet nur das Sidepanel (Chrome) bzw. dient als Fallback für `action.onClicked`. **Kein** Live-Badge-Polling im Background.
+
+Formatierung und Hilfsfunktionen: [`extension/src/lib/live-badge.ts`](../../extension/src/lib/live-badge.ts). Badge-Updates: [`spacetime.svelte.ts`](../../extension/src/lib/spacetime.svelte.ts) (`recountOnline`, `syncActiveTabBadge`, `clearActiveTabBadge`).
 
 ```
-                      [ Nutzer surft im Browser ]
-                                  │
-         tabs.onActivated / onUpdated / chrome.alarms (1 min)
-                                  ▼
-                    ┌────────────────────────────┐
-                    │  Background Service Worker  │
-                    │      (background.ts)       │
-                    └─────────────┬──────────────┘
-                                  │
-                 Semantische URL-Normalisierung (cleanUrl)
-                                  │
-             ┌────────────────────┴────────────────────┐
-             │                                         │
-    Option 1: HTTP SQL Query                  Option 2: WebSocket
-    (Leichtgewichtiger REST-Abruf)            (Reaktive Push-Subscription)
-    POST /database/sql                        SELECT * FROM user_session
-             │                                         │
-             └────────────────────┬────────────────────┘
-                                  ▼
-                    ┌────────────────────────────┐
-                    │    SpacetimeDB Instance    │
-                    │        (Cloud/Local)       │
-                    └─────────────┬──────────────┘
-                                  ▼
-                       Online-Count ermitteln
-                                  ▼
-                   chrome.action.setBadgeText({
-                     text: count >= 2 ? count : '',
-                     tabId: activeTabId
-                   })
+        [ Sidepanel offen, Nutzer im Chat-Raum ]
+                          │
+              WebSocket: join_room + Subscription
+              user_session / chat_message pro URL
+                          ▼
+              ┌────────────────────────────┐
+              │    SpacetimeDB (Cloud)     │
+              └─────────────┬──────────────┘
+                            ▼
+                 Online-Count (lokal im Client)
+                            ▼
+              chrome.action.setBadgeText({
+                text: count >= 2 ? count : '',
+                tabId: activeTabId
+              })
+
+        [ Sidepanel geschlossen ]
+                          │
+              disconnect → Badge leer, keine URL an Server
 ```
 
 ---
 
-## 3. Datenabfrage: Zwei Optionen im Background Worker
+## 3. Datenabfrage
 
-Da der Service Worker im Hintergrund schlafen gelegt werden kann (Lifecycle von MV3 Service Workern), muss die Datenabfrage ressourcenschonend sein:
+**Umsetzung:** ausschließlich **WebSocket** im Sidepanel (`subscribeToUrl`, Table-Callbacks auf `user_session`). Kein HTTP-SQL aus dem Background.
 
-### Option A: HTTP SQL Endpoint – *Empfohlen für Background*
-SpacetimeDB Maincloud (wie in `extension/src/lib/live-badge.ts`, aufgerufen aus `background.ts`):
-```http
-POST https://maincloud.spacetimedb.com/v1/database/wepchat/sql
-Content-Type: text/plain
+`fetchOnlineCount` in `live-badge.ts` bleibt für Tests und optional späteres Opt-in (z. B. explizite Nutzer-Einstellung), wird im produktiven Extension-Pfad nicht aufgerufen.
 
-SELECT count(*) as total FROM user_session WHERE current_url = 'https://www.youtube.com/watch?v=...'
-```
-
-Öffentlicher Lesezugriff auf `public` Tabellen, kein Client-Secret. Siehe [security.md](security.md).
-* **Vorteil**: 
-  * Extrem ressourcensparend (kein dauerhafter WebSocket im Background Service Worker).
-  * Der Service Worker kann sich nach dem Request schlafen legen.
-  * Kein Verbindungs-Overhead bei Tabs, die man nur kurz ansurft.
-* **Trigger**: 
-  * `chrome.tabs.onActivated` (Nutzer wechselt den Tab)
-  * `chrome.tabs.onUpdated` (URL ändert sich im aktuellen Tab, wenn `changeInfo.url` oder `changeInfo.status === 'complete'`)
-  * `chrome.alarms` (`wepchat-live-badge-poll`, **1 Minute**): aktualisiert nur den **aktiven Tab im zuletzt fokussierten Fenster** (`tabs.query({ active: true, lastFocusedWindow: true })`), damit sich der Badge auch ohne Tab-Wechsel ändert, wenn andere beitreten oder gehen. Beim Alarm-Tick wird der URL-Cache **nicht** genutzt (`bypassCache`); Tab-Events nutzen weiter den 10-Sekunden-Cache.
-
-### Option B: WebSocket Subscription (Dauerhafte Echtzeit)
-* Der Background Worker hält eine WebSocket-Verbindung und abonniert:
-  `SELECT identity, current_url FROM user_session WHERE current_url = '{url}'`
-* **Vorteil**: Aktualisiert sich im selben Tab sekündlich live, wenn jemand beitritt oder geht.
-* **Nachteil**: Service Worker in MV3 werden nach 30–60 Sekunden Inaktivität von Chrome beendet, wodurch WebSockets getrennt werden und Reconnect-Logik nötig ist.
-
-> **Umsetzung**: **Option A (HTTP SQL)** bei Tab-Wechsel, URL-Laden und minütlichem Alarm. Wenn das Sidepanel geöffnet ist, aktualisiert es den Badge zusätzlich live über den bestehenden WebSocket (`user_session`).
+Historische Option (HTTP-SQL / `chrome.alarms` im Background) wurde entfernt, um **keine Tab-URLs** an den Server zu senden, solange der Nutzer WepChat nicht geöffnet hat. Siehe [security.md](security.md) §6.
 
 ---
 
@@ -95,48 +64,35 @@ Die Chrome Action API (`chrome.action`) besitzt feste Einschränkungen:
 
 1. **Badge-Text**:
    * Maximal 4 Zeichen lesbar.
-   * Formatierung:
+   * Formatierung (`formatBadgeText`):
      * `count <= 1`: `""` (leer)
      * `2 <= count <= 99`: `${count}` (z. B. `"2"`, `"42"`)
      * `100 <= count <= 999`: `${count}` (z. B. `"150"`)
      * `count >= 1000`: `"99+"`
 
 2. **Badge-Farbe**:
-   * Hintergrund: Kräftiges Akzent-Blau (`#2563EB`) oder Markenfarbe von WepChat.
+   * Hintergrund: Akzent-Blau (`#2563EB`, `BADGE_COLOR` in `live-badge.ts`).
    * Textfarbe: Weiß (`#FFFFFF`).
 
 3. **Gültigkeitsbereich (`tabId`)**:
-   * Bei jedem Update muss zwingend `tabId` mitgegeben werden:
+   * Bei jedem Update muss `tabId` mitgegeben werden:
      ```ts
      await chrome.action.setBadgeText({ text: formattedCount, tabId });
      await chrome.action.setBadgeBackgroundColor({ color: '#2563EB', tabId });
      ```
-   * Dadurch wird verhindert, dass eine Zahl fälschlicherweise auf allen Tabs angezeigt wird.
 
 ---
 
-## 5. URL-Konsistenz (Wichtig!)
+## 5. URL-Konsistenz
 
-Der Background Worker muss exakt dieselbe `cleanUrl()`-Logik verwenden wie das Frontend ([url.svelte.ts](file:///Users/johann/MyBrew/WepChat/extension/src/lib/url.svelte.ts)):
-* YouTube-Shortlinks & Videos werden auf `https://www.youtube.com/watch?v={id}` bereinigt.
-* Amazon-Artikel auf `/dp/{ASIN}`.
-* Tracking-Parameter (`utm_*`, `fbclid`, etc.) werden gestrippt.
-
-Nur so stimmen die Zähler im Badge und im geöffneten Chatraum zu 100 % überein.
+Raum-URL und Badge zählen dieselbe normalisierte URL wie der Chat (`cleanUrl` in [`url-utils.ts`](../../extension/src/lib/url-utils.ts)): YouTube, Amazon, Tracking-Parameter, usw.
 
 ---
 
-## 6. Schritt-für-Schritt Implementierungsplan (wenn gecodet wird)
+## 6. Implementierung (Referenz)
 
-1. **`cleanUrl()` auslagern / teilen**:
-   * Sicherstellen, dass `cleanUrl` in `src/lib/url-utils.ts` ohne Svelte-Runtimes exportiert wird, damit `background.ts` sie direkt importieren kann.
-2. **SpacetimeDB HTTP Count Client**:
-   * Kleine Hilfsfunktion `fetchOnlineCount(url: string): Promise<number>` schreiben.
-3. **Event-Listener in `background.ts`**:
-   * `tabs.onActivated` (Tab gewechselt) -> URL holen -> Count abfragen -> `setBadgeText({ text, tabId })`.
-   * `tabs.onUpdated` (Seite neu geladen) -> prüfen ob `changeInfo.url` oder Status complete -> Badge aktualisieren.
-4. **Cache**:
-   * 10 Sekunden In-Memory-Cache pro URL bei Tab-Events (`LIVE_BADGE_CACHE_TTL_MS` in `live-badge.ts`).
-5. **Periodisches Polling (aktiver Tab)**:
-   * Manifest-Permission `alarms`, Alarm `LIVE_BADGE_ALARM_NAME` mit `periodInMinutes: 1`.
-   * `alarms.onAlarm` ruft `fetchOnlineCount` mit `bypassCache: true` für den aktiven Tab auf.
+| Ort | Verhalten |
+|-----|-----------|
+| `background.ts` | Sidepanel-Verhalten, beim Start global leerer Badge |
+| `spacetime.svelte.ts` | `recountOnline` → Badge; `disconnect` / `clearRoomPresence` → Badge leeren |
+| `live-badge.ts` | `formatBadgeText`, `BADGE_COLOR`; `fetchOnlineCount` nur Tests / optional später |

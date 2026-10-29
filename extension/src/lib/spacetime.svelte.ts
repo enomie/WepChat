@@ -142,6 +142,36 @@ function createSpacetimeChat() {
     syncOwnRoomDisplayName();
   }
 
+  function clearActiveTabBadge() {
+    if (!browser.action) return;
+    browser.tabs
+      .query({ active: true, currentWindow: true })
+      .then(([tab]) => {
+        if (tab?.id) {
+          browser.action.setBadgeText({ text: '', tabId: tab.id }).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }
+
+  function syncActiveTabBadge(count: number) {
+    if (!browser.action) return;
+    browser.tabs
+      .query({ active: true, currentWindow: true })
+      .then(([tab]) => {
+        if (tab?.id) {
+          const text = formatBadgeText(count);
+          browser.action.setBadgeText({ text, tabId: tab.id }).catch(() => {});
+          if (text) {
+            browser.action
+              .setBadgeBackgroundColor({ color: BADGE_COLOR, tabId: tab.id })
+              .catch(() => {});
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
   function recountOnline() {
     if (!conn || !subscribedUrl) return;
     let count = 0;
@@ -149,19 +179,7 @@ function createSpacetimeChat() {
       if (session.currentUrl === subscribedUrl) count++;
     }
     state.onlineCount = count;
-
-    // Badge synchronisieren, wenn Sidepanel offen ist
-    if (browser.action) {
-      browser.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-        if (tab?.id) {
-          const text = formatBadgeText(count);
-          browser.action.setBadgeText({ text, tabId: tab.id }).catch(() => {});
-          if (text) {
-            browser.action.setBadgeBackgroundColor({ color: BADGE_COLOR, tabId: tab.id }).catch(() => {});
-          }
-        }
-      }).catch(() => {});
-    }
+    syncActiveTabBadge(count);
   }
 
   function syncPresence(url: string, username: string, nickColorId: number) {
@@ -189,6 +207,7 @@ function createSpacetimeChat() {
     state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
     state.onlineCount = 0;
     state.roomDisplayName = null;
+    clearActiveTabBadge();
   }
 
   function subscribeToUrl(url: string, username: string, nickColorId: number) {
@@ -259,6 +278,7 @@ function createSpacetimeChat() {
     state.visibleLimit = DEFAULT_VISIBLE_LIMIT;
     state.roomDisplayName = null;
     subscribedUrl = '';
+    clearActiveTabBadge();
   }
 
   function loadOlderVisible() {

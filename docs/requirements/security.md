@@ -84,7 +84,7 @@ Alle Client-Verbindungen von WepChat zum gehosteten Backend laufen über **TLS**
 | Pfad | Protokoll | Code |
 |------|-----------|------|
 | Sidepanel (Chat, Presence, Reducer) | `wss://` (WebSocket über TLS) | `extension/src/lib/spacetime.svelte.ts` |
-| Background (Live-Badge, SQL-Count) | `https://` | `extension/src/entrypoints/background.ts` |
+| Background (Sidepanel öffnen) | — | `extension/src/entrypoints/background.ts` (kein URL-HTTP) |
 | Entwickler-Publish (`spacetime publish`) | HTTPS der CLI zum Cloud-Host | nur lokal/CI |
 
 **Was TLS leistet:** Schutz **auf dem Transportweg** (WLAN, ISP, Mitläufer im Netz). Payload ist für Dritte unterwegs nicht im Klartext lesbar.
@@ -118,17 +118,15 @@ Reducer (u. a.): `join_room`, `leave_room`, `send_message`, `identity_disconnect
 
 ---
 
-## 6. HTTP-SQL im Background (Live Badge)
+## 6. Live Badge und Background (Datenschutz)
 
-Für den tab-spezifischen Badge fragt der **Service Worker** ohne separates Secret die öffentliche SQL-API ab (`extension/src/lib/live-badge.ts`, aufgerufen aus `background.ts`). Zusätzlich zur Tab-Navigation nutzt die Extension die Permission **`alarms`**: etwa **ein SQL-POST pro Minute** für den aktiven Tab im fokussierten Fenster (ohne 10s-Cache), plus Abrufe bei Tab-Wechsel und URL-Updates (mit 10s-Cache pro URL).
+Der **Background Service Worker** sendet **keine** Tab-URLs an SpacetimeDB. Er öffnet das Sidepanel (Chrome) und setzt beim Start einen leeren Badge.
 
-**Sicherheitsrelevant:**
+Die **Badge-Zahl** am Icon wird nur aktualisiert, solange das **Sidepanel offen** ist: der Count kommt aus der bestehenden WebSocket-Subscription auf `user_session` (`spacetime.svelte.ts`), nicht aus HTTP-SQL im Hintergrund. Beim Schließen des Panels wird die Verbindung getrennt und der Badge geleert.
 
-- Liest nur aus **`user_session`** (Count pro `current_url`), gleiche Daten wie Subscriptions im Sidepanel.
-- URLs werden per `cleanUrl()` escaped (einfaches SQL-Escape für `'`); siehe [live_badge.md](live_badge.md).
-- **Missbrauch:** Viele SQL-POSTs könnten Last erzeugen oder öffentliche Tabellen auslesen, kein zusätzlicher Schutz durch Client-Secret; ggf. später Rate-Limits auf Anbieter-Seite, Caching, oder Badge nur über WebSocket wenn Sidepanel offen.
+**Server-Kontakt mit URL** (Raum beitreten, Nachrichten, Subscriptions) passiert damit nur, wenn der Nutzer WepChat aktiv nutzt. Details: [live_badge.md](live_badge.md).
 
-Details: [live_badge.md](live_badge.md).
+Die Hilfsfunktion `fetchOnlineCount` in `live-badge.ts` (öffentlicher SQL-Endpoint) ist für Tests reserviert und wird im Extension-Runtime-Pfad nicht aufgerufen.
 
 ---
 

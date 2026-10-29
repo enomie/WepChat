@@ -123,7 +123,7 @@ export default app;
 ```
 
 #### 3. Background Service Worker (`src/entrypoints/background.ts`)
-Öffnet das Side Panel beim Klick auf das Action-Icon und pflegt den **Live-Badge** (Tab-Events plus `chrome.alarms`, 1 Minute für den aktiven Tab). Details: [live_badge.md](../requirements/live_badge.md).
+Öffnet das Side Panel beim Klick auf das Action-Icon. Der **Live-Badge** wird nur im Sidepanel über WebSocket gepflegt (kein URL-HTTP im Background). Details: [live_badge.md](../requirements/live_badge.md).
 
 Beispiel (nur Side-Panel-Verhalten, verkürzt):
 

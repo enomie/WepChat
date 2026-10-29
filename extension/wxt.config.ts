@@ -23,7 +23,6 @@ export default defineConfig({
       'tabs',
       'storage',
       'activeTab',
-      'alarms',
     ],
     // In Chrome: natives side_panel
     ...(browser === 'chrome'

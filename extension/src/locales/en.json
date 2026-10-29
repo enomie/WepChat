@@ -51,7 +51,7 @@
     "faq4": "Incognito mode? Temporary session only, resets when closed.",
     "faq5": "All chat messages are automatically deleted after 72 hours.",
     "faq6": "Encryption? Yes. Your browser connects to our servers over TLS. It is not a secret chat: anyone in the same room can read messages; they stay on the server until automatic deletion.",
-    "faq7": "Badge on the icon? The number shows how many people currently have WepChat open on this page and are in the chat room. We do not track which pages you visit. You only register for a room when you open the side panel.",
+    "faq7": "Badge on the icon? While the side panel is open, the number shows how many people have WepChat open on this page. With the panel closed, we send no page URL to the server and the badge stays empty. Your presence in a room starts only when you open the panel.",
     "contact": "Contact: wepchat@proton.me"
   },
   "settings": {

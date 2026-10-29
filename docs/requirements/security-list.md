@@ -135,7 +135,7 @@ const MAX_URL_LEN: usize = 2048;
 
 | Maßnahme | Ort | Anmerkung |
 |----------|-----|-----------|
-| **SQL escapen** ✓ | `sql-literal-escape.ts`, `spacetime.svelte.ts`, `background.ts` | `'` in URL für Subscription-SQL und Badge-Count |
+| **SQL escapen** ✓ | `sql-literal-escape.ts`, `spacetime.svelte.ts`, `live-badge.ts` | `'` in URL für Subscription-SQL (und optional HTTP-Count in Tests) |
 | **Localhost** | `cleanUrl()` / `url.svelte.ts` | Kein Chat-Raum |
 | **Nachrichten vor Send** | erledigt | [message-content.md](message-content.md) |
 | **Identity-Token** | `spacetime.svelte.ts` | Optional `storage.local` für stabile Identity |
@@ -149,10 +149,9 @@ Alles hier ist **umgehbar**, Server-Regeln aus Abschnitt 2 bleiben maßgeblich.
 
 | Maßnahme | Nutzen |
 |----------|--------|
-| Localhost → kein SQL/Badge | Weniger Noise |
-| Cache 10 s | Tab-Events, schnelles Tab-Hopping |
-| Alarm 1 min., aktiver Tab | Badge ohne Sidepanel bei gleicher URL; `bypassCache` am Alarm-Tick |
-| `live-badge.ts` | Gemeinsame Logik für Background und Sidepanel-Formatierung |
+| Kein HTTP-SQL / keine Tab-Events für Badge | Keine Tab-URLs an den Server ohne geöffnetes Panel |
+| Sidepanel öffnen (Chrome) | Nutzeraktion statt Hintergrund-Telemetrie |
+| `live-badge.ts` | `formatBadgeText` / Farbe im Sidepanel; kein Background-Polling |
 
 ---
 
